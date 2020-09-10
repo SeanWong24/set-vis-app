@@ -1,0 +1,12 @@
+:host {
+  display: block;
+}
+
+#file-input {
+  display: none;
+}
+
+s-set-vis {
+  height: 600px;
+  widows: 100%;
+}

@@ -6,6 +6,8 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
+    interface AppCloneVis {
+    }
     interface AppHome {
     }
     interface AppRoot {
@@ -14,6 +16,12 @@ export namespace Components {
     }
 }
 declare global {
+    interface HTMLAppCloneVisElement extends Components.AppCloneVis, HTMLStencilElement {
+    }
+    var HTMLAppCloneVisElement: {
+        prototype: HTMLAppCloneVisElement;
+        new (): HTMLAppCloneVisElement;
+    };
     interface HTMLAppHomeElement extends Components.AppHome, HTMLStencilElement {
     }
     var HTMLAppHomeElement: {
@@ -33,12 +41,15 @@ declare global {
         new (): HTMLAppWeatherVisElement;
     };
     interface HTMLElementTagNameMap {
+        "app-clone-vis": HTMLAppCloneVisElement;
         "app-home": HTMLAppHomeElement;
         "app-root": HTMLAppRootElement;
         "app-weather-vis": HTMLAppWeatherVisElement;
     }
 }
 declare namespace LocalJSX {
+    interface AppCloneVis {
+    }
     interface AppHome {
     }
     interface AppRoot {
@@ -46,6 +57,7 @@ declare namespace LocalJSX {
     interface AppWeatherVis {
     }
     interface IntrinsicElements {
+        "app-clone-vis": AppCloneVis;
         "app-home": AppHome;
         "app-root": AppRoot;
         "app-weather-vis": AppWeatherVis;
@@ -55,6 +67,7 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            "app-clone-vis": LocalJSX.AppCloneVis & JSXBase.HTMLAttributes<HTMLAppCloneVisElement>;
             "app-home": LocalJSX.AppHome & JSXBase.HTMLAttributes<HTMLAppHomeElement>;
             "app-root": LocalJSX.AppRoot & JSXBase.HTMLAttributes<HTMLAppRootElement>;
             "app-weather-vis": LocalJSX.AppWeatherVis & JSXBase.HTMLAttributes<HTMLAppWeatherVisElement>;
