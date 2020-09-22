@@ -17,9 +17,30 @@ export class AppWeatherVis {
   private readonly variableOptions: string[] = [
     'TSK',
     'PSFC',
+    'ALBEDO',
     'EMISS',
     'GRDFLX',
-    'RAINC'
+    'RAINC',
+    'RAINNC',
+    'SH2O',
+    'SNOW',
+    'GLW',
+    'HFX',
+    'LH',
+    'LWDNB',
+    'LWUPB',
+    'PBLH',
+    'PREC_ACC_NC',
+    'Q2',
+    'QFX',
+    'SWDNB',
+    'SWDOWN',
+    'SWNORM',
+    'SWUPB',
+    'T2',
+    'U10',
+    'V10',
+    'SMOIS'
   ];
 
   private SQL: SqlJs.SqlJsStatic;
@@ -27,7 +48,7 @@ export class AppWeatherVis {
   private fileInputElement: HTMLInputElement;
   private setVisElement: HTMLSSetVisElement;
   private selectedVariables: string[];
-  private timeBy: string = 'Day';
+  private timeBy: string = 'Month';
 
   @State() file: File;
 
@@ -93,11 +114,12 @@ export class AppWeatherVis {
               <ion-select-option>Day</ion-select-option>
               <ion-select-option>Week</ion-select-option>
               <ion-select-option>Month</ion-select-option>
+              <ion-select-option>Quarter </ion-select-option>
             </ion-select>
           </ion-item>
           <s-set-vis
             ref={el => this.setVisElement = el}
-            parallel-sets-ribbon-tension=".6"
+            parallel-sets-ribbon-tension={.5}
             parallelSetsDimensions={['']}
           ></s-set-vis>
         </ion-content>
@@ -127,29 +149,34 @@ export class AppWeatherVis {
       const loading = await loadingController.create({
         message: `Qeurying data...`
       });
-      if (timeBy === 'Day') {
-        await loading.present();
-        const sqlQuery = 'select time, latitude, longitude, ' + variables.join(', ') + ' from weather';
-        const result = this.DB.exec(sqlQuery)?.[0];
-        data = result.values.map(value => {
-          const datum = {};
-          for (let i = 0; i < value.length; i++) {
-            datum[result.columns[i]] = +value[i];
-          }
-          return datum;
-        });
-      } else if (timeBy === 'Week') {
-        await loading.present();
-        const sqlQuery = 'select time, latitude, longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather group by time / 7, latitude, longitude';
-        const result = this.DB.exec(sqlQuery)?.[0];
-        data = result.values.map(value => {
-          const datum = {};
-          for (let i = 0; i < value.length; i++) {
-            datum[result.columns[i]] = +value[i];
-          }
-          return datum;
-        });
+      let sqlQuery: string;
+      let result: SqlJs.QueryResults;
+      await loading.present();
+      switch (timeBy) {
+        case 'Day':
+          sqlQuery = 'select time, latitude, longitude, ' + variables.join(', ') + ' from weather';
+          result = this.DB.exec(sqlQuery)?.[0];
+          break;
+        case 'Week':
+          sqlQuery = 'select time, latitude, longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather group by time / 7, latitude, longitude';
+          result = this.DB.exec(sqlQuery)?.[0];
+          break;
+        case 'Month':
+          sqlQuery = 'select time, latitude, longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather group by time / 30, latitude, longitude';
+          result = this.DB.exec(sqlQuery)?.[0];
+          break;
+        case 'Quarter':
+          sqlQuery = 'select time, latitude, longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather group by time / 120, latitude, longitude';
+          result = this.DB.exec(sqlQuery)?.[0];
+          break;
       }
+      data = result.values.map(value => {
+        const datum = {};
+        for (let i = 0; i < value.length; i++) {
+          datum[result.columns[i]] = +value[i];
+        }
+        return datum;
+      });
 
       const quantileScaleDict = {};
       variables.forEach(variable => quantileScaleDict[variable] = d3.scaleQuantile().domain(data.map(d => d[variable])).range([.25, .5, .75, 1]));
