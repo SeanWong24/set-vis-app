@@ -28,10 +28,20 @@ export class AppWeatherVis {
   private DB: SqlJs.Database;
   private fileInputElement: HTMLInputElement;
   private setVisElement: HTMLSSetVisElement;
+  private mapSvgElement: SVGElement;
   private selectedVariables: string[];
   private timeBy: string = 'Month';
+  private selectedLocation?: { x: number, y: number };
 
   @State() file: File;
+  @State() datasetInfo?: {
+    minLatitude: number,
+    maxLatitude: number,
+    latitudeCount: number,
+    minLongitude: number,
+    maxLongitude: number,
+    longitudeCount: number
+  };
 
   async connectedCallback() {
     this.SQL = await initSqlJs({ locateFile: fileName => `./assets/sql.js/${fileName}` });
@@ -63,12 +73,14 @@ export class AppWeatherVis {
                 this.selectedVariables = detail.value;
                 const data = await this.queryData(this.selectedVariables, this.timeBy);
                 // TODO try to use states
-                this.setVisElement.data = data;
-                this.setVisElement.parallelSetsDimensions = this.selectedVariables.map(variable => '_' + variable).concat(['Date']);
-                this.setVisElement.statisticsPlotGroupDefinitions = this.selectedVariables.map(variable => ({
-                  dimensionName: variable,
-                  visType: 'box'
-                }));
+                if (data) {
+                  this.setVisElement.data = data;
+                  this.setVisElement.parallelSetsDimensions = this.selectedVariables.map(variable => '_' + variable).concat(['Date']);
+                  this.setVisElement.statisticsPlotGroupDefinitions = this.selectedVariables.map(variable => ({
+                    dimensionName: variable,
+                    visType: 'box'
+                  }));
+                }
               }}
             >
               {
@@ -82,7 +94,7 @@ export class AppWeatherVis {
               value={this.timeBy}
               onIonChange={async ({ detail }) => {
                 this.timeBy = detail.value;
-                const data = await this.queryData(this.selectedVariables, this.timeBy);
+                const data = await this.queryData(this.selectedVariables, this.timeBy, this.selectedLocation);
                 // TODO try to use states
                 this.setVisElement.data = data;
                 this.setVisElement.parallelSetsDimensions = this.selectedVariables.map(variable => '_' + variable).concat(['Date']);
@@ -104,6 +116,50 @@ export class AppWeatherVis {
             parallelSetsDimensions={['']}
             parallelSetsMaxSegmentLimit={12}
           ></s-set-vis>
+          <svg
+            ref={el => this.mapSvgElement = el}
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            width="100%"
+            height={`${(this.datasetInfo?.latitudeCount || 0) / (this.datasetInfo?.longitudeCount || 0) * 100 || 0}%`}>
+            {
+              ((xCount: number, yCount: number) => {
+                const rects = [];
+                for (let x = 0; x < xCount; x++) {
+                  for (let y = 0; y < yCount; y++) {
+                    rects.push(
+                      <rect
+                        fill="grey"
+                        x={x * 100 / this.datasetInfo?.longitudeCount}
+                        y={100 - (y + 1) * 100 / this.datasetInfo?.latitudeCount}
+                        width={100 / this.datasetInfo?.longitudeCount}
+                        height={100 / this.datasetInfo?.latitudeCount}
+
+                        onClick={async event => {
+                          this.selectedLocation = { x, y };
+
+                          const data = await this.queryData(this.selectedVariables, this.timeBy, this.selectedLocation);
+                          // TODO try to use states
+                          if (data) {
+                            this.setVisElement.data = data;
+                            this.setVisElement.parallelSetsDimensions = this.selectedVariables.map(variable => '_' + variable).concat(['Date']);
+                            this.setVisElement.statisticsPlotGroupDefinitions = this.selectedVariables.map(variable => ({
+                              dimensionName: variable,
+                              visType: 'box'
+                            }));
+
+                            this.mapSvgElement.querySelectorAll('rect').forEach(el => el.setAttribute('fill', 'grey'));
+                            (event.target as SVGRectElement).setAttribute('fill', 'red');
+                          }
+                        }}
+                      ></rect>
+                    )
+                  }
+                }
+                return rects;
+              })(this.datasetInfo?.longitudeCount, this.datasetInfo?.latitudeCount)
+            }
+          </svg>
         </ion-content>
 
         <input
@@ -124,35 +180,60 @@ export class AppWeatherVis {
     );
   }
 
-  private async queryData(variables: string[], timeBy: string) {
+  private async queryData(variables: string[], timeBy: string, location?: { x: number, y: number }) {
     let data = [];
 
     if (variables?.length > 0 && timeBy) {
       const loading = await loadingController.create({
         message: `Qeurying data...`
       });
+      await loading.present();
       let sqlQuery: string;
       let result: SqlJs.QueryResults;
-      await loading.present();
+      let latitude: string;
+      let longitude: string;
+
+      if (location) {
+        sqlQuery = `select Longitude from (select distinct Longitude from weather order by Longitude ASC limit ${location.x + 1}) order by Longitude DESC limit 1`;
+        result = this.DB.exec(sqlQuery)?.[0];
+        longitude = result.values[0].toString();
+
+        sqlQuery = `select Latitude from (select distinct Latitude from weather order by Latitude ASC limit ${location.y + 1}) order by Latitude DESC limit 1`;
+        result = this.DB.exec(sqlQuery)?.[0];
+        latitude = result.values[0].toString();
+      }
+
       switch (timeBy) {
         case 'Day':
           sqlQuery = 'select Date, Latitude, Longitude, ' + variables.join(', ') + ' from weather';
-          result = this.DB.exec(sqlQuery)?.[0];
+          if (location) {
+            sqlQuery += ` where Longitude = ${longitude} and Latitude = ${latitude}`;
+          }
           break;
         case 'Week':
-          sqlQuery = 'select substr(Date, 0, 8) as Date, Latitude, Longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather group by substr(Date, 0, 8), Latitude, Longitude';
-          result = this.DB.exec(sqlQuery)?.[0];
+          sqlQuery = 'select substr(Date, 0, 8) as Date, Latitude, Longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather';
+          if (location) {
+            sqlQuery += ` where Longitude = ${longitude} and Latitude = ${latitude}`;
+          }
+          sqlQuery += ' group by substr(Date, 0, 8), Latitude, Longitude';
           break;
         case 'Month':
-          sqlQuery = 'select substr(Date, 0, 8) as Date, Latitude, Longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather group by substr(Date, 0, 8), Latitude, Longitude';
-          result = this.DB.exec(sqlQuery)?.[0];
+          sqlQuery = 'select substr(Date, 0, 8) as Date, Latitude, Longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather';
+          if (location) {
+            sqlQuery += ` where Longitude = ${longitude} and Latitude = ${latitude}`;
+          }
+          sqlQuery += ' group by substr(Date, 0, 8), Latitude, Longitude';
           break;
         case 'Quarter':
-          sqlQuery = 'select substr(Date, 0, 8) as Date, Latitude, Longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather group by substr(Date, 0, 8), Latitude, Longitude';
-          result = this.DB.exec(sqlQuery)?.[0];
+          sqlQuery = 'select substr(Date, 0, 8) as Date, Latitude, Longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather';
+          if (location) {
+            sqlQuery += ` where Longitude = ${longitude} and Latitude = ${latitude}`;
+          }
+          sqlQuery += ' group by substr(Date, 0, 8), Latitude, Longitude';
           break;
       }
-      data = result.values.map(value => {
+      result = this.DB.exec(sqlQuery)?.[0];
+      data = result?.values.map(value => {
         const datum = {};
         for (let i = 0; i < value.length; i++) {
           datum[result.columns[i]] = result.columns[i] === 'Date' ? value[i] : +value[i];
@@ -160,9 +241,23 @@ export class AppWeatherVis {
         return datum;
       });
 
-      const quantileScaleDict = {};
-      variables.forEach(variable => quantileScaleDict[variable] = d3.scaleQuantile().domain(data.map(d => d[variable])).range([.25, .5, .75, 1]));
-      data.forEach(d => variables.forEach(variable => d[`_${variable}`] = quantileScaleDict[variable](d[variable])));
+      if (data) {
+        const quantileScaleDict = {};
+        variables.forEach(variable => quantileScaleDict[variable] = d3.scaleQuantile().domain(data.map(d => d[variable])).range([.25, .5, .75, 1]));
+        data.forEach(d => variables.forEach(variable => d[`_${variable}`] = quantileScaleDict[variable](d[variable])));
+      }
+
+      if (!location) {
+        sqlQuery = 'select min(Latitude) as minLatitude, max(Latitude) as maxLatitude, count(distinct Latitude) as latitudeCount, min(Longitude) as minLongitude, max(Longitude) as maxLongitude, count(distinct Longitude) as longitudeCount from weather';
+        result = this.DB.exec(sqlQuery)?.[0];
+        this.datasetInfo = result.values.map(value => {
+          const datum: any = {};
+          for (let i = 0; i < value.length; i++) {
+            datum[result.columns[i]] = +value[i];
+          }
+          return datum;
+        })[0];
+      }
 
       await loading.dismiss();
     }
