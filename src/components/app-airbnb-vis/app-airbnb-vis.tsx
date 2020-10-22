@@ -28,6 +28,7 @@ export class AppArbnb {
   private DB: SqlJs.Database;
   private fileInputElement: HTMLInputElement;
   private setVisElement: HTMLSSetVisElement;
+  private mapIframeElement: HTMLIFrameElement;
   private selectedVariables: string[];
 
   @State() file: File;
@@ -60,17 +61,7 @@ export class AppArbnb {
               multiple
               onIonChange={async ({ detail }) => {
                 this.selectedVariables = detail.value;
-                const data = await this.queryData();
-                // TODO try to use states
-                if (data) {
-                  this.setVisElement.data = data;
-                  debugger
-                  this.setVisElement.parallelSetsDimensions = ['room_type', 'borough', 'neighborhood'];
-                  this.setVisElement.statisticsPlotGroupDefinitions = ['overall_satisfaction', 'price'].map(variable => ({
-                    dimensionName: variable,
-                    visType: 'box'
-                  }));
-                }
+                this.updateData();
               }}
             >
               {
@@ -83,7 +74,37 @@ export class AppArbnb {
             parallel-sets-ribbon-tension={.5}
             parallelSetsDimensions={['']}
           ></s-set-vis>
-          <iframe width="425" height="350" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.openstreetmap.org/export/embed.html?bbox=-114.82635498046876%2C50.82372226295971%2C-113.48052978515625%2C51.3760666589962&amp;layer=mapnik&amp;marker=51.10071934888555%2C-114.1534423828125" style={{ border: "1px solid black" }}></iframe><br /><small><a href="https://www.openstreetmap.org/?mlat=51.1007&amp;mlon=-114.1534#map=11/51.1007/-114.1534">View Larger Map</a></small>
+          <iframe
+            width="500"
+            height="500"
+            style={{ border: '0' }}
+            ref={async el => {
+              this.mapIframeElement = el;
+              const content = await (await fetch('./assets/map.html')).text();
+              if (!el.contentDocument.querySelector('div#map')) {
+                el.contentDocument.open();
+                el.contentDocument.write(content);
+                el.contentDocument.close();
+                window.addEventListener('message', ({ data }) => {
+                  switch (data.type) {
+                    case 'hello':
+                      el.contentWindow.postMessage({
+                        type: 'view center point',
+                        info: [51.045868, -114.061627]
+                      }, '*');
+                      break;
+                    case 'select rect':
+                      this.updateData(data.info);
+                      break;
+                  }
+                });
+              }
+            }}></iframe>
+          <ion-button
+            onClick={() => this.mapIframeElement.contentWindow.postMessage({
+              type: 'reset range selection'
+            }, '*')}
+          >Remove Range Selection</ion-button>
         </ion-content>
 
         <input
@@ -100,14 +121,35 @@ export class AppArbnb {
             this.DB = new this.SQL.Database(new Uint8Array(fileBuffer));
             await loading.dismiss();
           }}></input>
-      </Host>
+      </Host >
     );
   }
 
-  private async queryData() {
+  private async updateData(range?: { minLat: number, maxLat: number, minLon: number; maxLon: number }) {
+    const data = await this.queryData(range);
+    // TODO try to use states
+    if (data) {
+      this.mapIframeElement.contentWindow.postMessage({
+        type: 'add pins',
+        info: data.sort((a, b) => b.overall_satisfaction - a.overall_satisfaction).slice(0, 100).map(d => [d.latitude, d.longitude])
+      }, '*');
+
+      this.setVisElement.data = data;
+      this.setVisElement.parallelSetsDimensions = ['room_type', 'borough', 'neighborhood'];
+      this.setVisElement.statisticsPlotGroupDefinitions = ['overall_satisfaction', 'price'].map(variable => ({
+        dimensionName: variable,
+        visType: 'box'
+      }));
+    }
+  }
+
+  private async queryData(range?: { minLat: number, maxLat: number, minLon: number; maxLon: number }) {
     let data = [];
 
-    const sqlQuery = `select room_type, borough, neighborhood, overall_satisfaction, price from arbnb where substr(last_modified, 0, 11) = '2016-08-22'`;
+    let sqlQuery = `select room_type, borough, neighborhood, overall_satisfaction, price, latitude, longitude from arbnb where substr(last_modified, 0, 11) = '2016-08-22'`;
+    if (range) {
+      sqlQuery += `and latitude >= ${range.minLat} and latitude <= ${range.maxLat} and longitude >= ${range.minLon} and longitude <= ${range.maxLon}`;
+    }
     const result = this.DB.exec(sqlQuery)?.[0];
 
     data = result?.values.map(value => {
