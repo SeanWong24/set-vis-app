@@ -6,6 +6,8 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
+    interface AppAirbnbVis {
+    }
     interface AppCloneVis {
     }
     interface AppHome {
@@ -16,6 +18,12 @@ export namespace Components {
     }
 }
 declare global {
+    interface HTMLAppAirbnbVisElement extends Components.AppAirbnbVis, HTMLStencilElement {
+    }
+    var HTMLAppAirbnbVisElement: {
+        prototype: HTMLAppAirbnbVisElement;
+        new (): HTMLAppAirbnbVisElement;
+    };
     interface HTMLAppCloneVisElement extends Components.AppCloneVis, HTMLStencilElement {
     }
     var HTMLAppCloneVisElement: {
@@ -41,6 +49,7 @@ declare global {
         new (): HTMLAppWeatherVisElement;
     };
     interface HTMLElementTagNameMap {
+        "app-airbnb-vis": HTMLAppAirbnbVisElement;
         "app-clone-vis": HTMLAppCloneVisElement;
         "app-home": HTMLAppHomeElement;
         "app-root": HTMLAppRootElement;
@@ -48,6 +57,8 @@ declare global {
     }
 }
 declare namespace LocalJSX {
+    interface AppAirbnbVis {
+    }
     interface AppCloneVis {
     }
     interface AppHome {
@@ -57,6 +68,7 @@ declare namespace LocalJSX {
     interface AppWeatherVis {
     }
     interface IntrinsicElements {
+        "app-airbnb-vis": AppAirbnbVis;
         "app-clone-vis": AppCloneVis;
         "app-home": AppHome;
         "app-root": AppRoot;
@@ -67,6 +79,7 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            "app-airbnb-vis": LocalJSX.AppAirbnbVis & JSXBase.HTMLAttributes<HTMLAppAirbnbVisElement>;
             "app-clone-vis": LocalJSX.AppCloneVis & JSXBase.HTMLAttributes<HTMLAppCloneVisElement>;
             "app-home": LocalJSX.AppHome & JSXBase.HTMLAttributes<HTMLAppHomeElement>;
             "app-root": LocalJSX.AppRoot & JSXBase.HTMLAttributes<HTMLAppRootElement>;

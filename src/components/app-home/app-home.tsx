@@ -42,6 +42,7 @@ export class AppHome {
           <ion-list>
             <ion-item button href="/clone">Clone</ion-item>
             <ion-item button href="/weather">Weather</ion-item>
+            <ion-item button href="/airbnb">Airbnb</ion-item>
           </ion-list>
         </ion-content>
       </Host>
