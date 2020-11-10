@@ -90,7 +90,10 @@ export class AppArbnb {
                     case 'hello':
                       el.contentWindow.postMessage({
                         type: 'view center point',
-                        info: [51.045868, -114.061627]
+                        info: {
+                          location: [51.045868, -114.061627],
+                          zoom: 10
+                        }
                       }, '*');
                       break;
                     case 'select rect':
