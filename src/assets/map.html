@@ -31,7 +31,7 @@
             const { type, info } = data;
             switch (type) {
                 case 'view center point':
-                    window.myMap.setView(info, 10);
+                    window.myMap.setView(info.location, info.zoom);
                     break;
                 case 'add pins':
                     for (const marker of window.mapMarkers) {

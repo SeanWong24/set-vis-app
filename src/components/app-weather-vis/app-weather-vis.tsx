@@ -28,10 +28,9 @@ export class AppWeatherVis {
   private DB: SqlJs.Database;
   private fileInputElement: HTMLInputElement;
   private setVisElement: HTMLSSetVisElement;
-  private mapSvgElement: SVGElement;
+  private mapIframeElement: HTMLIFrameElement;
   private selectedVariables: string[];
   private timeBy: string = 'Month';
-  private selectedLocation?: { x: number, y: number };
 
   @State() file: File;
   @State() datasetInfo?: {
@@ -71,16 +70,7 @@ export class AppWeatherVis {
               multiple
               onIonChange={async ({ detail }) => {
                 this.selectedVariables = detail.value;
-                const data = await this.queryData(this.selectedVariables, this.timeBy);
-                // TODO try to use states
-                if (data) {
-                  this.setVisElement.data = data;
-                  this.setVisElement.parallelSetsDimensions = this.selectedVariables.map(variable => '_' + variable).concat(['Date']);
-                  this.setVisElement.statisticsPlotGroupDefinitions = this.selectedVariables.map(variable => ({
-                    dimensionName: variable,
-                    visType: 'box'
-                  }));
-                }
+                this.updateData();
               }}
             >
               {
@@ -94,14 +84,7 @@ export class AppWeatherVis {
               value={this.timeBy}
               onIonChange={async ({ detail }) => {
                 this.timeBy = detail.value;
-                const data = await this.queryData(this.selectedVariables, this.timeBy, this.selectedLocation);
-                // TODO try to use states
-                this.setVisElement.data = data;
-                this.setVisElement.parallelSetsDimensions = this.selectedVariables.map(variable => '_' + variable).concat(['Date']);
-                this.setVisElement.statisticsPlotGroupDefinitions = this.selectedVariables.map(variable => ({
-                  dimensionName: variable,
-                  visType: 'box'
-                }));
+                this.updateData();
               }}
             >
               <ion-select-option>Day</ion-select-option>
@@ -116,50 +99,37 @@ export class AppWeatherVis {
             parallelSetsDimensions={['']}
             parallelSetsMaxSegmentLimit={12}
           ></s-set-vis>
-          <svg
-            ref={el => this.mapSvgElement = el}
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            width="100%"
-            height={`${(this.datasetInfo?.latitudeCount || 0) / (this.datasetInfo?.longitudeCount || 0) * 100 || 0}%`}>
-            {
-              ((xCount: number, yCount: number) => {
-                const rects = [];
-                for (let x = 0; x < xCount; x++) {
-                  for (let y = 0; y < yCount; y++) {
-                    rects.push(
-                      <rect
-                        fill="grey"
-                        x={x * 100 / this.datasetInfo?.longitudeCount}
-                        y={100 - (y + 1) * 100 / this.datasetInfo?.latitudeCount}
-                        width={100 / this.datasetInfo?.longitudeCount}
-                        height={100 / this.datasetInfo?.latitudeCount}
-
-                        onClick={async event => {
-                          this.selectedLocation = { x, y };
-
-                          const data = await this.queryData(this.selectedVariables, this.timeBy, this.selectedLocation);
-                          // TODO try to use states
-                          if (data) {
-                            this.setVisElement.data = data;
-                            this.setVisElement.parallelSetsDimensions = this.selectedVariables.map(variable => '_' + variable).concat(['Date']);
-                            this.setVisElement.statisticsPlotGroupDefinitions = this.selectedVariables.map(variable => ({
-                              dimensionName: variable,
-                              visType: 'box'
-                            }));
-
-                            this.mapSvgElement.querySelectorAll('rect').forEach(el => el.setAttribute('fill', 'grey'));
-                            (event.target as SVGRectElement).setAttribute('fill', 'red');
-                          }
-                        }}
-                      ></rect>
-                    )
+          <iframe
+            width="500"
+            height="500"
+            style={{ border: '0' }}
+            ref={async el => {
+              this.mapIframeElement = el;
+              const content = await (await fetch('./assets/map.html')).text();
+              if (!el.contentDocument.querySelector('div#map')) {
+                el.contentDocument.open();
+                el.contentDocument.write(content);
+                el.contentDocument.close();
+                window.addEventListener('message', ({ data }) => {
+                  switch (data.type) {
+                    case 'hello':
+                      el.contentWindow.postMessage({
+                        type: 'view center point',
+                        info: [0, 0]
+                      }, '*');
+                      break;
+                    case 'select rect':
+                      this.updateData(data.info);
+                      break;
                   }
-                }
-                return rects;
-              })(this.datasetInfo?.longitudeCount, this.datasetInfo?.latitudeCount)
-            }
-          </svg>
+                });
+              }
+            }}></iframe>
+          <ion-button
+            onClick={() => this.mapIframeElement.contentWindow.postMessage({
+              type: 'reset range selection'
+            }, '*')}
+          >Remove Range Selection</ion-button>
         </ion-content>
 
         <input
@@ -180,7 +150,27 @@ export class AppWeatherVis {
     );
   }
 
-  private async queryData(variables: string[], timeBy: string, location?: { x: number, y: number }) {
+  private async updateData(range?: { minLat: number, maxLat: number, minLon: number; maxLon: number }) {
+    const data = await this.queryData(this.selectedVariables, this.timeBy, range);
+
+    this.mapIframeElement.contentWindow.postMessage({
+      type: 'view center point',
+      info: {
+        location: [(this.datasetInfo.maxLatitude + this.datasetInfo.minLatitude) / 2, (this.datasetInfo.maxLongitude + this.datasetInfo.minLongitude) / 2],
+        zoom: 6
+      }
+    }, '*');
+
+    // TODO try to use states
+    this.setVisElement.data = data;
+    this.setVisElement.parallelSetsDimensions = this.selectedVariables.map(variable => '_' + variable).concat(['Date']);
+    this.setVisElement.statisticsPlotGroupDefinitions = this.selectedVariables.map(variable => ({
+      dimensionName: variable,
+      visType: 'box'
+    }));
+  }
+
+  private async queryData(variables: string[], timeBy: string, range?: { minLat: number, maxLat: number, minLon: number; maxLon: number }) {
     let data = [];
 
     if (variables?.length > 0 && timeBy) {
@@ -190,44 +180,32 @@ export class AppWeatherVis {
       await loading.present();
       let sqlQuery: string;
       let result: SqlJs.QueryResults;
-      let latitude: string;
-      let longitude: string;
-
-      if (location) {
-        sqlQuery = `select Longitude from (select distinct Longitude from weather order by Longitude ASC limit ${location.x + 1}) order by Longitude DESC limit 1`;
-        result = this.DB.exec(sqlQuery)?.[0];
-        longitude = result.values[0].toString();
-
-        sqlQuery = `select Latitude from (select distinct Latitude from weather order by Latitude ASC limit ${location.y + 1}) order by Latitude DESC limit 1`;
-        result = this.DB.exec(sqlQuery)?.[0];
-        latitude = result.values[0].toString();
-      }
 
       switch (timeBy) {
         case 'Day':
           sqlQuery = 'select Date, Latitude, Longitude, ' + variables.join(', ') + ' from weather';
-          if (location) {
-            sqlQuery += ` where Longitude = ${longitude} and Latitude = ${latitude}`;
+          if (range) {
+            sqlQuery += ` where Latitude >= ${range.minLat} and Latitude <= ${range.maxLat} and Longitude >= ${range.minLon} and Longitude <= ${range.maxLon}`;
           }
           break;
         case 'Week':
           sqlQuery = 'select substr(Date, 0, 8) as Date, Latitude, Longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather';
-          if (location) {
-            sqlQuery += ` where Longitude = ${longitude} and Latitude = ${latitude}`;
+          if (range) {
+            sqlQuery += ` where Latitude >= ${range.minLat} and Latitude <= ${range.maxLat} and Longitude >= ${range.minLon} and Longitude <= ${range.maxLon}`;
           }
           sqlQuery += ' group by substr(Date, 0, 8), Latitude, Longitude';
           break;
         case 'Month':
           sqlQuery = 'select substr(Date, 0, 8) as Date, Latitude, Longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather';
-          if (location) {
-            sqlQuery += ` where Longitude = ${longitude} and Latitude = ${latitude}`;
+          if (range) {
+            sqlQuery += ` where Latitude >= ${range.minLat} and Latitude <= ${range.maxLat} and Longitude >= ${range.minLon} and Longitude <= ${range.maxLon}`;
           }
           sqlQuery += ' group by substr(Date, 0, 8), Latitude, Longitude';
           break;
         case 'Quarter':
           sqlQuery = 'select substr(Date, 0, 8) as Date, Latitude, Longitude, ' + variables.map(variable => `avg(${variable}) as ${variable}`).join(', ') + ' from weather';
-          if (location) {
-            sqlQuery += ` where Longitude = ${longitude} and Latitude = ${latitude}`;
+          if (range) {
+            sqlQuery += ` where Latitude >= ${range.minLat} and Latitude <= ${range.maxLat} and Longitude >= ${range.minLon} and Longitude <= ${range.maxLon}`;
           }
           sqlQuery += ' group by substr(Date, 0, 8), Latitude, Longitude';
           break;
@@ -247,7 +225,7 @@ export class AppWeatherVis {
         data.forEach(d => variables.forEach(variable => d[`_${variable}`] = quantileScaleDict[variable](d[variable])));
       }
 
-      if (!location) {
+      if (!range) {
         sqlQuery = 'select min(Latitude) as minLatitude, max(Latitude) as maxLatitude, count(distinct Latitude) as latitudeCount, min(Longitude) as minLongitude, max(Longitude) as maxLongitude, count(distinct Longitude) as longitudeCount from weather';
         result = this.DB.exec(sqlQuery)?.[0];
         this.datasetInfo = result.values.map(value => {
