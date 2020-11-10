@@ -3,7 +3,7 @@ import { loadingController } from '@ionic/core';
 import 'set-vis';
 import initSqlJs from 'sql.js';
 import { SqlJs } from 'sql.js/module';
-import * as d3 from 'd3';
+// import * as d3 from 'd3';
 
 /// <reference path="../../../node_modules/@types/sql.js/module.d.ts" />
 
@@ -29,7 +29,8 @@ export class AppArbnb {
   private fileInputElement: HTMLInputElement;
   private setVisElement: HTMLSSetVisElement;
   private mapIframeElement: HTMLIFrameElement;
-  private selectedVariables: string[];
+  
+  selectedVariables: string[];
 
   @State() file: File;
 
