@@ -100,8 +100,8 @@ export class AppWeatherVis {
             parallelSetsMaxSegmentLimit={12}
           ></s-set-vis>
           <iframe
-            width="500"
-            height="500"
+            width="600"
+            height="600"
             style={{ border: '0' }}
             ref={async el => {
               this.mapIframeElement = el;

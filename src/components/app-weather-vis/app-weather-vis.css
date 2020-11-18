@@ -8,5 +8,10 @@
 
 s-set-vis {
   height: 600px;
-  widows: 100%;
+  width: calc(100% - 650px);
+  display: inline-flex;
+}
+
+iframe {
+  display: inline-block;
 }
