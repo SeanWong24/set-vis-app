@@ -28,9 +28,21 @@ export class AppWeatherVis {
   private DB: SqlJs.Database;
   private fileInputElement: HTMLInputElement;
   private setVisElement: HTMLSSetVisElement;
+  private setVisElement2: HTMLSSetVisElement;
   private mapIframeElement: HTMLIFrameElement;
+  private mapIframeElement2: HTMLIFrameElement;
   private selectedVariables: string[];
   private timeBy: string = 'Month';
+  private textureDefinitions = [
+    'this.textures.lines().orientation("2/8")',
+    'this.textures.lines().orientation("4/8")',
+    'this.textures.lines().orientation("6/8")',
+    'this.textures.lines().orientation("8/8")',
+    'this.textures.circles()',
+    'this.textures.circles().heavier()',
+    'this.textures.circles().lighter()',
+    'this.textures.circles().radius(5).fill("transparent").strokeWidth(2)'
+  ]
 
   @State() file: File;
   @State() datasetInfo?: {
@@ -70,7 +82,8 @@ export class AppWeatherVis {
               multiple
               onIonChange={async ({ detail }) => {
                 this.selectedVariables = detail.value;
-                this.updateData();
+                this.updateData(1);
+                this.updateData(2);
               }}
             >
               {
@@ -84,7 +97,8 @@ export class AppWeatherVis {
               value={this.timeBy}
               onIonChange={async ({ detail }) => {
                 this.timeBy = detail.value;
-                this.updateData();
+                this.updateData(1);
+                this.updateData(2);
               }}
             >
               <ion-select-option>Day</ion-select-option>
@@ -93,43 +107,92 @@ export class AppWeatherVis {
               <ion-select-option>Quarter </ion-select-option>
             </ion-select>
           </ion-item>
-          <s-set-vis
-            ref={el => this.setVisElement = el}
-            parallel-sets-ribbon-tension={.5}
-            parallelSetsDimensions={['']}
-            parallelSetsMaxSegmentLimit={12}
-          ></s-set-vis>
-          <iframe
-            width="600"
-            height="600"
-            style={{ border: '0' }}
-            ref={async el => {
-              this.mapIframeElement = el;
-              const content = await (await fetch('./assets/map.html')).text();
-              if (!el.contentDocument.querySelector('div#map')) {
-                el.contentDocument.open();
-                el.contentDocument.write(content);
-                el.contentDocument.close();
-                window.addEventListener('message', ({ data }) => {
-                  switch (data.type) {
-                    case 'hello':
-                      el.contentWindow.postMessage({
-                        type: 'view center point',
-                        info: [0, 0]
-                      }, '*');
-                      break;
-                    case 'select rect':
-                      this.updateData(data.info);
-                      break;
-                  }
-                });
-              }
-            }}></iframe>
-          <ion-button
-            onClick={() => this.mapIframeElement.contentWindow.postMessage({
-              type: 'reset range selection'
-            }, '*')}
-          >Remove Range Selection</ion-button>
+          <div>
+            <s-set-vis
+              ref={el => this.setVisElement = el}
+              parallel-sets-ribbon-tension={.5}
+              parallelSetsDimensions={['']}
+              parallelSetsMaxSegmentLimit={12}
+              parallelSetsTexutureDefinitions={this.textureDefinitions}
+            ></s-set-vis>
+            <iframe
+              width="600"
+              height="600"
+              style={{ border: '0' }}
+              ref={async el => {
+                this.mapIframeElement = el;
+                const content = await (await fetch('./assets/map.html')).text();
+                if (!el.contentDocument.querySelector('div#map')) {
+                  el.contentDocument.open();
+                  el.contentDocument.write(content);
+                  el.contentDocument.close();
+                  window.addEventListener('message', event => {
+                    if (event.source === this.mapIframeElement.contentWindow) {
+                      const data = event.data;
+                      switch (data.type) {
+                        case 'hello':
+                          el.contentWindow.postMessage({
+                            type: 'view center point',
+                            info: [0, 0]
+                          }, '*');
+                          break;
+                        case 'select rect':
+                          this.updateData(1, data.info);
+                          break;
+                      }
+                    }
+                  });
+                }
+              }}></iframe>
+            <ion-button
+              onClick={() => this.mapIframeElement.contentWindow.postMessage({
+                type: 'reset range selection'
+              }, '*')}
+            >Remove Range Selection</ion-button>
+          </div>
+          <div>
+            <s-set-vis
+              ref={el => this.setVisElement2 = el}
+              parallel-sets-ribbon-tension={.5}
+              parallelSetsDimensions={['']}
+              parallelSetsMaxSegmentLimit={12}
+              parallelSetsTexutureDefinitions={this.textureDefinitions}
+            ></s-set-vis>
+            <iframe
+              width="600"
+              height="600"
+              style={{ border: '0' }}
+              ref={async el => {
+                this.mapIframeElement2 = el;
+                const content = await (await fetch('./assets/map.html')).text();
+                if (!el.contentDocument.querySelector('div#map')) {
+                  el.contentDocument.open();
+                  el.contentDocument.write(content);
+                  el.contentDocument.close();
+                  window.addEventListener('message', event => {
+                    if (event.source === this.mapIframeElement2.contentWindow) {
+                      const data = event.data;
+                      switch (data.type) {
+                        case 'hello':
+                          el.contentWindow.postMessage({
+                            type: 'view center point',
+                            info: [0, 0]
+                          }, '*');
+                          break;
+                        case 'select rect':
+                          this.updateData(2, data.info);
+                          break;
+                      }
+                    }
+                  });
+                }
+              }}></iframe>
+            <ion-button
+              onClick={() => this.mapIframeElement2.contentWindow.postMessage({
+                type: 'reset range selection'
+              }, '*')}
+            >Remove Range Selection</ion-button>
+          </div>
         </ion-content>
 
         <input
@@ -150,24 +213,42 @@ export class AppWeatherVis {
     );
   }
 
-  private async updateData(range?: { minLat: number, maxLat: number, minLon: number; maxLon: number }) {
+  private async updateData(visIndex: number, range?: { minLat: number, maxLat: number, minLon: number; maxLon: number }) {
     const data = await this.queryData(this.selectedVariables, this.timeBy, range);
 
-    this.mapIframeElement.contentWindow.postMessage({
-      type: 'view center point',
-      info: {
-        location: [(this.datasetInfo.maxLatitude + this.datasetInfo.minLatitude) / 2, (this.datasetInfo.maxLongitude + this.datasetInfo.minLongitude) / 2],
-        zoom: 6
-      }
-    }, '*');
+    if (visIndex === 1) {
+      this.mapIframeElement.contentWindow.postMessage({
+        type: 'view center point',
+        info: {
+          location: [(this.datasetInfo.maxLatitude + this.datasetInfo.minLatitude) / 2, (this.datasetInfo.maxLongitude + this.datasetInfo.minLongitude) / 2],
+          zoom: 6
+        }
+      }, '*');
 
-    // TODO try to use states
-    this.setVisElement.data = data;
-    this.setVisElement.parallelSetsDimensions = this.selectedVariables.map(variable => '_' + variable).concat(['Date']);
-    this.setVisElement.statisticsPlotGroupDefinitions = this.selectedVariables.map(variable => ({
-      dimensionName: variable,
-      visType: 'box'
-    }));
+      // TODO try to use states
+      this.setVisElement.data = data;
+      this.setVisElement.parallelSetsDimensions = this.selectedVariables.map(variable => '_' + variable).concat(['Date']);
+      this.setVisElement.statisticsPlotGroupDefinitions = this.selectedVariables.map(variable => ({
+        dimensionName: variable,
+        visType: 'box'
+      }));
+    } else if (visIndex === 2) {
+      this.mapIframeElement2.contentWindow.postMessage({
+        type: 'view center point',
+        info: {
+          location: [(this.datasetInfo.maxLatitude + this.datasetInfo.minLatitude) / 2, (this.datasetInfo.maxLongitude + this.datasetInfo.minLongitude) / 2],
+          zoom: 6
+        }
+      }, '*');
+
+      // TODO try to use states
+      this.setVisElement2.data = data;
+      this.setVisElement2.parallelSetsDimensions = this.selectedVariables.map(variable => '_' + variable).concat(['Date']);
+      this.setVisElement2.statisticsPlotGroupDefinitions = this.selectedVariables.map(variable => ({
+        dimensionName: variable,
+        visType: 'box'
+      }));
+    }
   }
 
   private async queryData(variables: string[], timeBy: string, range?: { minLat: number, maxLat: number, minLon: number; maxLon: number }) {
