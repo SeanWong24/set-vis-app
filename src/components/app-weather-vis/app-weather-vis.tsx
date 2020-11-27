@@ -121,6 +121,7 @@ export class AppWeatherVis {
               parallelSetsMaxSegmentLimit={12}
               parallelSetsTexutureDefinitions={this.textureDefinitions}
               parallelSetsColorScheme={this.colorScheme}
+              dark-mode={JSON.parse(localStorage.getItem('isDarkModeEnabled'))}
             ></s-set-vis>
             <iframe
               width="600"
@@ -165,6 +166,7 @@ export class AppWeatherVis {
               parallelSetsMaxSegmentLimit={12}
               parallelSetsTexutureDefinitions={this.textureDefinitions}
               parallelSetsColorScheme={this.colorScheme}
+              dark-mode={JSON.parse(localStorage.getItem('isDarkModeEnabled'))}
             ></s-set-vis>
             <iframe
               width="600"
