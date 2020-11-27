@@ -303,7 +303,7 @@ export class AppWeatherVis {
       data = result?.values.map(value => {
         const datum = {};
         for (let i = 0; i < value.length; i++) {
-          datum[result.columns[i]] = result.columns[i] === 'Date' ? value[i] : +value[i];
+          datum[result.columns[i]] = result.columns[i] === 'Date' ? this.obtainDateString(value[i] as string) : +value[i];
         }
         return datum;
       });
@@ -330,6 +330,36 @@ export class AppWeatherVis {
     }
 
     return data;
+  }
+
+  private obtainDateString(date: string) {
+    // TODO this only work for months for now
+    switch (date.substring(5)) {
+      case '01':
+        return 'Jan';
+      case '02':
+        return 'Feb';
+      case '03':
+        return 'Mar';
+      case '04':
+        return 'Apr';
+      case '05':
+        return 'May';
+      case '06':
+        return 'Jun';
+      case '07':
+        return 'Jul';
+      case '08':
+        return 'Aug';
+      case '09':
+        return 'Sep';
+      case '10':
+        return 'Oct';
+      case '11':
+        return 'Nov';
+      case '12':
+        return 'Dec';
+    }
   }
 
 }
