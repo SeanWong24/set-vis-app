@@ -23,6 +23,12 @@ export class AppWeatherVis {
     "RelativeHumidity",
     "Solar"
   ];
+  private readonly colorScheme = [
+    'rgb(0, 0, 200)',
+    'rgb(100, 0, 150)',
+    'rgb(150, 0, 100)',
+    'rgb(200, 0, 0)'
+  ];
 
   private SQL: SqlJs.SqlJsStatic;
   private DB: SqlJs.Database;
@@ -114,6 +120,7 @@ export class AppWeatherVis {
               parallelSetsDimensions={['']}
               parallelSetsMaxSegmentLimit={12}
               parallelSetsTexutureDefinitions={this.textureDefinitions}
+              parallelSetsColorScheme={this.colorScheme}
             ></s-set-vis>
             <iframe
               width="600"
@@ -157,6 +164,7 @@ export class AppWeatherVis {
               parallelSetsDimensions={['']}
               parallelSetsMaxSegmentLimit={12}
               parallelSetsTexutureDefinitions={this.textureDefinitions}
+              parallelSetsColorScheme={this.colorScheme}
             ></s-set-vis>
             <iframe
               width="600"
