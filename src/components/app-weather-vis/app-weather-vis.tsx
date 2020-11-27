@@ -34,10 +34,10 @@ export class AppWeatherVis {
   private selectedVariables: string[];
   private timeBy: string = 'Month';
   private textureDefinitions = [
-    'this.textures.lines().orientation("2/8")',
-    'this.textures.lines().orientation("4/8")',
-    'this.textures.lines().orientation("6/8")',
-    'this.textures.lines().orientation("8/8")',
+    'this.textures.lines().orientation("2/8").size(10)',
+    'this.textures.lines().orientation("4/8").size(10)',
+    'this.textures.lines().orientation("6/8").size(10)',
+    'this.textures.lines().orientation("8/8").size(10)',
     'this.textures.circles()',
     'this.textures.circles().heavier()',
     'this.textures.circles().lighter()',
