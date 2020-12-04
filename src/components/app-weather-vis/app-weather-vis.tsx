@@ -24,10 +24,10 @@ export class AppWeatherVis {
     "Solar"
   ];
   private readonly colorScheme = [
-    'rgb(0, 0, 200)',
-    'rgb(100, 0, 150)',
-    'rgb(150, 0, 100)',
-    'rgb(200, 0, 0)'
+    '#2c7bb6',
+    '#abd9e9',
+    '#fdae61',
+    '#f32a2c'
   ];
 
   private SQL: SqlJs.SqlJsStatic;
@@ -40,14 +40,22 @@ export class AppWeatherVis {
   private selectedVariables: string[];
   private timeBy: string = 'Month';
   private textureDefinitions = [
-    'this.textures.lines().orientation("2/8").size(10)',
-    'this.textures.lines().orientation("4/8").size(10)',
-    'this.textures.lines().orientation("6/8").size(10)',
-    'this.textures.lines().orientation("8/8").size(10)',
-    'this.textures.circles()',
-    'this.textures.circles().heavier()',
-    'this.textures.circles().lighter()',
-    'this.textures.circles().radius(5).fill("transparent").strokeWidth(2)'
+    // 'this.textures.lines().orientation("2/8").size(10)',
+    // 'this.textures.lines().orientation("4/8").size(10)',
+    // 'this.textures.lines().orientation("6/8").size(10)',
+    // 'this.textures.lines().orientation("8/8").size(10)',
+    // 'this.textures.paths().d("squares").size(10)',
+    // 'this.textures.paths().d("squares").size(20)',
+    // 'this.textures.paths().d("squares").size(30)',
+    // 'this.textures.paths().d("squares").size(40)',
+    'this.textures.circles().radius(2)',
+    'this.textures.circles().radius(3)',
+    'this.textures.circles().radius(4)',
+    'this.textures.circles().radius(5)',
+    // 'this.textures.circles().radius(2).fill("transparent").strokeWidth(2)',
+    // 'this.textures.circles().radius(3).fill("transparent").strokeWidth(2)',
+    // 'this.textures.circles().radius(4).fill("transparent").strokeWidth(2)',
+    // 'this.textures.circles().radius(5).fill("transparent").strokeWidth(2)'
   ]
 
   @State() file: File;
