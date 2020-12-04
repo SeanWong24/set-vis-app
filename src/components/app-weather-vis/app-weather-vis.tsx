@@ -235,6 +235,31 @@ export class AppWeatherVis {
     const data = await this.queryData(this.selectedVariables, this.timeBy, range);
 
     if (visIndex === 1) {
+      const contours = d3.contours()
+        .size([this.datasetInfo.longitudeCount, this.datasetInfo.latitudeCount])
+        .thresholds([.25, .5, .75, 1])
+        .smooth(true)(data.filter(d => d.Date === 'Jan').map(d => d['_' + this.selectedVariables[0]]));
+
+      const scaleX = d3.scaleLinear().domain([0, this.datasetInfo.longitudeCount]).range([this.datasetInfo.minLongitude, this.datasetInfo.maxLongitude]);
+      const scaleY = d3.scaleLinear().domain([0, this.datasetInfo.latitudeCount]).range([this.datasetInfo.minLatitude, this.datasetInfo.maxLatitude]);
+      const geoJson = contours.map(contour => {
+        contour.coordinates = contour.coordinates.map(coordinateGroup => coordinateGroup.map(positions => positions.map(([x, y]) => [scaleX(x), scaleY(y)])));
+        return contour;
+      });
+
+      this.mapIframeElement.contentWindow.postMessage({
+        type: 'contour',
+        info: {
+          geoJson: geoJson,
+          colorDict: {
+            '0.25': this.colorScheme[0],
+            '0.5': this.colorScheme[1],
+            '0.75': this.colorScheme[2],
+            '1': this.colorScheme[3]
+          }
+        }
+      }, '*');
+
       this.mapIframeElement.contentWindow.postMessage({
         type: 'view center point',
         info: {
@@ -251,6 +276,31 @@ export class AppWeatherVis {
         visType: 'box'
       }));
     } else if (visIndex === 2) {
+      const contours = d3.contours()
+        .size([this.datasetInfo.longitudeCount, this.datasetInfo.latitudeCount])
+        .thresholds([.25, .5, .75, 1])
+        .smooth(true)(data.filter(d => d.Date === 'Jan').map(d => d['_' + this.selectedVariables[0]]));
+
+      const scaleX = d3.scaleLinear().domain([0, this.datasetInfo.longitudeCount]).range([this.datasetInfo.minLongitude, this.datasetInfo.maxLongitude]);
+      const scaleY = d3.scaleLinear().domain([0, this.datasetInfo.latitudeCount]).range([this.datasetInfo.minLatitude, this.datasetInfo.maxLatitude]);
+      const geoJson = contours.map(contour => {
+        contour.coordinates = contour.coordinates.map(coordinateGroup => coordinateGroup.map(positions => positions.map(([x, y]) => [scaleX(x), scaleY(y)])));
+        return contour;
+      });
+
+      this.mapIframeElement2.contentWindow.postMessage({
+        type: 'contour',
+        info: {
+          geoJson: geoJson,
+          colorDict: {
+            '0.25': this.colorScheme[0],
+            '0.5': this.colorScheme[1],
+            '0.75': this.colorScheme[2],
+            '1': this.colorScheme[3]
+          }
+        }
+      }, '*');
+
       this.mapIframeElement2.contentWindow.postMessage({
         type: 'view center point',
         info: {
