@@ -235,13 +235,22 @@ export class AppWeatherVis {
     const data = await this.queryData(this.selectedVariables, this.timeBy, range);
 
     if (visIndex === 1) {
+      const longitudeSet = new Set(data.map(d => d.Longitude));
+      const latitudeSet = new Set(data.map(d => d.Latitude));
+      const longitudeCount = longitudeSet.size;
+      const latitudeCount = latitudeSet.size;
+      const minLongitude = Math.min(...longitudeSet);
+      const maxLongitude = Math.max(...longitudeSet);
+      const minLatitude = Math.min(...latitudeSet);
+      const maxLatitude = Math.max(...latitudeSet);
+
       const contours = d3.contours()
-        .size([this.datasetInfo.longitudeCount, this.datasetInfo.latitudeCount])
+        .size([longitudeCount, latitudeCount])
         .thresholds([.25, .5, .75, 1])
         .smooth(true)(data.filter(d => d.Date === 'Jan').map(d => d['_' + this.selectedVariables[0]]));
 
-      const scaleX = d3.scaleLinear().domain([0, this.datasetInfo.longitudeCount]).range([this.datasetInfo.minLongitude, this.datasetInfo.maxLongitude]);
-      const scaleY = d3.scaleLinear().domain([0, this.datasetInfo.latitudeCount]).range([this.datasetInfo.minLatitude, this.datasetInfo.maxLatitude]);
+      const scaleX = d3.scaleLinear().domain([0, longitudeCount]).range([minLongitude, maxLongitude]);
+      const scaleY = d3.scaleLinear().domain([0, latitudeCount]).range([minLatitude, maxLatitude]);
       const geoJson = contours.map(contour => {
         contour.coordinates = contour.coordinates.map(coordinateGroup => coordinateGroup.map(positions => positions.map(([x, y]) => [scaleX(x), scaleY(y)])));
         return contour;
@@ -276,13 +285,22 @@ export class AppWeatherVis {
         visType: 'box'
       }));
     } else if (visIndex === 2) {
+      const longitudeSet = new Set(data.map(d => d.Longitude));
+      const latitudeSet = new Set(data.map(d => d.Latitude));
+      const longitudeCount = longitudeSet.size;
+      const latitudeCount = latitudeSet.size;
+      const minLongitude = Math.min(...longitudeSet);
+      const maxLongitude = Math.max(...longitudeSet);
+      const minLatitude = Math.min(...latitudeSet);
+      const maxLatitude = Math.max(...latitudeSet);
+
       const contours = d3.contours()
-        .size([this.datasetInfo.longitudeCount, this.datasetInfo.latitudeCount])
+        .size([longitudeCount, latitudeCount])
         .thresholds([.25, .5, .75, 1])
         .smooth(true)(data.filter(d => d.Date === 'Jan').map(d => d['_' + this.selectedVariables[0]]));
 
-      const scaleX = d3.scaleLinear().domain([0, this.datasetInfo.longitudeCount]).range([this.datasetInfo.minLongitude, this.datasetInfo.maxLongitude]);
-      const scaleY = d3.scaleLinear().domain([0, this.datasetInfo.latitudeCount]).range([this.datasetInfo.minLatitude, this.datasetInfo.maxLatitude]);
+      const scaleX = d3.scaleLinear().domain([0, longitudeCount]).range([minLongitude, maxLongitude]);
+      const scaleY = d3.scaleLinear().domain([0, latitudeCount]).range([minLatitude, maxLatitude]);
       const geoJson = contours.map(contour => {
         contour.coordinates = contour.coordinates.map(coordinateGroup => coordinateGroup.map(positions => positions.map(([x, y]) => [scaleX(x), scaleY(y)])));
         return contour;
