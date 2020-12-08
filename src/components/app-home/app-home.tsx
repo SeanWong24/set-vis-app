@@ -18,7 +18,10 @@ export class AppHome {
     const isDarkModeEnabled = localStorage.getItem('isDarkModeEnabled');
     if (!isDarkModeEnabled) {
       this.isDarkModeEnabled = true;
+    } else {
+      this.isDarkModeEnabled = JSON.parse(isDarkModeEnabled);
     }
+    this.isDarkModeEnabledWatchHandler(this.isDarkModeEnabled)
   }
 
   render() {
