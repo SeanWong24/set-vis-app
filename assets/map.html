@@ -88,7 +88,7 @@
                     if (window.mouseDrawRect) {
                         window.myMap.removeLayer(window.mouseDrawRect);
                     }
-                    window.mouseDrawRect = L.rectangle([[minLat, minLon], [maxLat, maxLon]], { color: "orange", weight: 1 }).addTo(window.myMap);
+                    window.mouseDrawRect = L.rectangle([[minLat, minLon], [maxLat, maxLon]], { color: "grey", fillColor: 'transparent', weight: 1 }).addTo(window.myMap);
                 }
             });
             window.myMap.addEventListener('mouseup', e => {
