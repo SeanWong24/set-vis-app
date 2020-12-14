@@ -24,8 +24,8 @@ export class AppWeatherVis {
     "Solar"
   ];
   private readonly colorScheme = [
-    '#2c7bb6',
-    '#abd9e9',
+    '#2222ee',
+    '#bbd9e9',
     '#fdae61',
     '#f32a2c'
   ];
@@ -40,18 +40,18 @@ export class AppWeatherVis {
   private selectedVariables: string[];
   private timeBy: string = 'Month';
   private textureDefinitions = [
-    // 'this.textures.lines().orientation("2/8").size(10)',
-    // 'this.textures.lines().orientation("4/8").size(10)',
-    // 'this.textures.lines().orientation("6/8").size(10)',
-    // 'this.textures.lines().orientation("8/8").size(10)',
+    'this.textures.lines().orientation("4/8").size(1000)',
+    'this.textures.lines().orientation("2/8").size(10)',
+    'this.textures.lines().orientation("8/8").size(10)',
+    'this.textures.lines().orientation("6/8").size(10)',
     // 'this.textures.paths().d("squares").size(10)',
     // 'this.textures.paths().d("squares").size(20)',
     // 'this.textures.paths().d("squares").size(30)',
     // 'this.textures.paths().d("squares").size(40)',
-    'this.textures.circles().radius(2)',
-    'this.textures.circles().radius(3)',
-    'this.textures.circles().radius(4)',
-    'this.textures.circles().radius(5)',
+    // 'this.textures.circles().radius(2)',
+    // 'this.textures.circles().radius(3)',
+    // 'this.textures.circles().radius(4)',
+    // 'this.textures.circles().radius(5)',
     // 'this.textures.circles().radius(2).fill("transparent").strokeWidth(2)',
     // 'this.textures.circles().radius(3).fill("transparent").strokeWidth(2)',
     // 'this.textures.circles().radius(4).fill("transparent").strokeWidth(2)',
@@ -389,7 +389,19 @@ export class AppWeatherVis {
       if (data) {
         const quantileScaleDict = {};
         variables.forEach(variable => quantileScaleDict[variable] = d3.scaleQuantile().domain(data.map(d => d[variable])).range([.25, .5, .75, 1]));
-        data.forEach(d => variables.forEach(variable => d[`_${variable}`] = quantileScaleDict[variable](d[variable])));
+        const obtainQuantileValueRange = (quantiles, quantileValue, variableValues) => {
+          switch (quantileValue) {
+            case .25:
+              return `${(+d3.min(variableValues)).toFixed(2)} ~ ${(+quantiles[0]).toFixed(2)}`;
+            case .5:
+              return `${(+quantiles[0]).toFixed(2)} ~ ${(+quantiles[1]).toFixed(2)}`;
+            case .75:
+              return `${(+quantiles[1]).toFixed(2)} ~ ${(+quantiles[2]).toFixed(2)}`;
+            case 1:
+              return `${(+quantiles[2]).toFixed(2)} ~ ${(+d3.max(variableValues)).toFixed(2)}`;
+          }
+        }
+        data.forEach(d => variables.forEach(variable => d[`_${variable}`] = obtainQuantileValueRange(quantileScaleDict[variable].quantiles(), quantileScaleDict[variable](d[variable]), data.map(d => d[variable]))));
       }
 
       if (!range) {
