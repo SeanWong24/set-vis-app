@@ -24,10 +24,10 @@ export class AppWeatherVis {
     "Solar"
   ];
   private readonly colorScheme = [
-    '#2222ee',
-    '#bbd9e9',
-    '#fdae61',
-    '#f32a2c'
+    '#4575b4',
+    '#abd9e9',
+    '#fee090',
+    '#f46d43'
   ];
 
   private SQL: SqlJs.SqlJsStatic;
