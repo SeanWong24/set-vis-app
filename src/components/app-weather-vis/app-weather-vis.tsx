@@ -235,37 +235,21 @@ export class AppWeatherVis {
     const data = await this.queryData(this.selectedVariables, this.timeBy, range);
 
     if (visIndex === 1) {
-      const longitudeSet = new Set(data.map(d => d.Longitude));
-      const latitudeSet = new Set(data.map(d => d.Latitude));
-      const longitudeCount = longitudeSet.size;
-      const latitudeCount = latitudeSet.size;
-      const minLongitude = Math.min(...longitudeSet);
-      const maxLongitude = Math.max(...longitudeSet);
-      const minLatitude = Math.min(...latitudeSet);
-      const maxLatitude = Math.max(...latitudeSet);
-
-      const contours = d3.contours()
-        .size([longitudeCount, latitudeCount])
-        .thresholds([.25, .5, .75, 1])
-        .smooth(true)(data.filter(d => d.Date === 'Jan').map(d => d['_' + this.selectedVariables[0]]));
-
-      const scaleX = d3.scaleLinear().domain([0, longitudeCount]).range([minLongitude, maxLongitude]);
-      const scaleY = d3.scaleLinear().domain([0, latitudeCount]).range([minLatitude, maxLatitude]);
-      const geoJson = contours.map(contour => {
-        contour.coordinates = contour.coordinates.map(coordinateGroup => coordinateGroup.map(positions => positions.map(([x, y]) => [scaleX(x), scaleY(y)])));
-        return contour;
-      });
-
+      const dataPoints = data.filter(d => d.Date === 'Jan').map(d => ({
+        latitude: d.Latitude,
+        longitude: d.Longitude,
+        value: d['_' + this.selectedVariables[0]]
+      }));
+      const sortedKeys = [...new Set(dataPoints.map(d => d.value))].sort((a: string, b: string) => +a.split(' ')[0] - +b.split(' ')[0]) as string[];
+      const colorDict = sortedKeys.reduce((cd, k, i) => (cd[k] = this.colorScheme[i], cd), {} as any);
+      dataPoints.forEach(d => d.value = colorDict[d.value])
+      debugger
       this.mapIframeElement.contentWindow.postMessage({
-        type: 'contour',
+        type: 'highlight',
         info: {
-          geoJson: geoJson,
-          colorDict: {
-            '0.25': this.colorScheme[0],
-            '0.5': this.colorScheme[1],
-            '0.75': this.colorScheme[2],
-            '1': this.colorScheme[3]
-          }
+          data: dataPoints,
+          marginLatitude: .312,
+          marginLongitude: .312
         }
       }, '*');
 
@@ -285,37 +269,21 @@ export class AppWeatherVis {
         visType: 'box'
       }));
     } else if (visIndex === 2) {
-      const longitudeSet = new Set(data.map(d => d.Longitude));
-      const latitudeSet = new Set(data.map(d => d.Latitude));
-      const longitudeCount = longitudeSet.size;
-      const latitudeCount = latitudeSet.size;
-      const minLongitude = Math.min(...longitudeSet);
-      const maxLongitude = Math.max(...longitudeSet);
-      const minLatitude = Math.min(...latitudeSet);
-      const maxLatitude = Math.max(...latitudeSet);
-
-      const contours = d3.contours()
-        .size([longitudeCount, latitudeCount])
-        .thresholds([.25, .5, .75, 1])
-        .smooth(true)(data.filter(d => d.Date === 'Jan').map(d => d['_' + this.selectedVariables[0]]));
-
-      const scaleX = d3.scaleLinear().domain([0, longitudeCount]).range([minLongitude, maxLongitude]);
-      const scaleY = d3.scaleLinear().domain([0, latitudeCount]).range([minLatitude, maxLatitude]);
-      const geoJson = contours.map(contour => {
-        contour.coordinates = contour.coordinates.map(coordinateGroup => coordinateGroup.map(positions => positions.map(([x, y]) => [scaleX(x), scaleY(y)])));
-        return contour;
-      });
-
+      const dataPoints = data.filter(d => d.Date === 'Jan').map(d => ({
+        latitude: d.Latitude,
+        longitude: d.Longitude,
+        value: d['_' + this.selectedVariables[0]]
+      }));
+      const sortedKeys = [...new Set(dataPoints.map(d => d.value))].sort((a: string, b: string) => +a.split(' ')[0] - +b.split(' ')[0]) as string[];
+      const colorDict = sortedKeys.reduce((cd, k, i) => (cd[k] = this.colorScheme[i], cd), {} as any);
+      dataPoints.forEach(d => d.value = colorDict[d.value])
+      debugger
       this.mapIframeElement2.contentWindow.postMessage({
-        type: 'contour',
+        type: 'highlight',
         info: {
-          geoJson: geoJson,
-          colorDict: {
-            '0.25': this.colorScheme[0],
-            '0.5': this.colorScheme[1],
-            '0.75': this.colorScheme[2],
-            '1': this.colorScheme[3]
-          }
+          data: dataPoints,
+          marginLatitude: .312,
+          marginLongitude: .312
         }
       }, '*');
 

@@ -33,14 +33,13 @@
                 case 'view center point':
                     window.myMap.setView(info.location, info.zoom);
                     break;
-                case 'contour':
-                    if (window.contourLayer) {
-                        window.myMap.removeLayer(window.contourLayer);
+                case 'highlight':
+                    if (window.highlightLayer) {
+                        window.myMap.removeLayer(window.highlightLayer);
                     }
-                    const { geoJson, colorDict } = info;
-                    window.contourLayer = L.geoJSON(geoJson, {
-                        style: (feature) => ({ color: colorDict[feature.geometry.value], fillColor: colorDict[feature.geometry.value] })
-                    }).addTo(myMap);
+                    const { data, marginLatitude, marginLongitude } = info;
+                    window.highlightLayer = L.layerGroup().addTo(myMap);
+                    data.forEach(datum => window.highlightLayer.addLayer(L.rectangle([[datum.latitude - marginLatitude / 2, datum.longitude - marginLongitude / 2], [datum.latitude + marginLatitude / 2, datum.longitude + marginLongitude / 2]], { color: datum.value, fillOpacity: .3, fillColor: datum.value })))
                     break;
                 case 'add pins':
                     for (const marker of window.mapMarkers) {
