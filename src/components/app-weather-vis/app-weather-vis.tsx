@@ -238,11 +238,17 @@ export class AppWeatherVis {
       const dataPoints = data.filter(d => d.Date === 'Jan').map(d => ({
         latitude: d.Latitude,
         longitude: d.Longitude,
-        value: d['_' + this.selectedVariables[0]]
+        value: d['_' + this.selectedVariables[0]],
+        secondaryValue: d['_' + this.selectedVariables[1]]
       }));
       const sortedKeys = [...new Set(dataPoints.map(d => d.value))].sort((a: string, b: string) => +a.split(' ')[0] - +b.split(' ')[0]) as string[];
       const colorDict = sortedKeys.reduce((cd, k, i) => (cd[k] = this.colorScheme[i], cd), {} as any);
-      dataPoints.forEach(d => d.value = colorDict[d.value])
+      const sortedKeys2 = [...new Set(dataPoints.map(d => d.secondaryValue))].sort((a: string, b: string) => +a.split(' ')[0] - +b.split(' ')[0]) as string[];
+      const textureDict = sortedKeys2.reduce((cd, k, i) => (cd[k] = this.textureDefinitions[i], cd), {} as any);
+      dataPoints.forEach(d => {
+        d.value = colorDict[d.value];
+        d.secondaryValue = textureDict[d.secondaryValue];
+      });
       debugger
       this.mapIframeElement.contentWindow.postMessage({
         type: 'highlight',
@@ -272,12 +278,17 @@ export class AppWeatherVis {
       const dataPoints = data.filter(d => d.Date === 'Jan').map(d => ({
         latitude: d.Latitude,
         longitude: d.Longitude,
-        value: d['_' + this.selectedVariables[0]]
+        value: d['_' + this.selectedVariables[0]],
+        secondaryValue: d['_' + this.selectedVariables[1]]
       }));
       const sortedKeys = [...new Set(dataPoints.map(d => d.value))].sort((a: string, b: string) => +a.split(' ')[0] - +b.split(' ')[0]) as string[];
       const colorDict = sortedKeys.reduce((cd, k, i) => (cd[k] = this.colorScheme[i], cd), {} as any);
-      dataPoints.forEach(d => d.value = colorDict[d.value])
-      debugger
+      const sortedKeys2 = [...new Set(dataPoints.map(d => d.secondaryValue))].sort((a: string, b: string) => +a.split(' ')[0] - +b.split(' ')[0]) as string[];
+      const textureDict = sortedKeys2.reduce((cd, k, i) => (cd[k] = this.textureDefinitions[i], cd), {} as any);
+      dataPoints.forEach(d => {
+        d.value = colorDict[d.value];
+        d.secondaryValue = textureDict[d.secondaryValue];
+      });
       this.mapIframeElement2.contentWindow.postMessage({
         type: 'highlight',
         info: {
