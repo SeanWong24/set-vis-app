@@ -53,7 +53,7 @@
                             texture = t.url();
                             textureMap.set(`${datum.value},${datum.secondaryValue}`, texture);
                         }
-                        window.highlightLayer.addLayer(L.rectangle([[datum.latitude - marginLatitude / 2, datum.longitude - marginLongitude / 2], [datum.latitude + marginLatitude / 2, datum.longitude + marginLongitude / 2]], { color: datum.value, fillOpacity: .3, fillColor: texture }));
+                        window.highlightLayer.addLayer(L.rectangle([[datum.latitude - marginLatitude / 2, datum.longitude - marginLongitude / 2], [datum.latitude + marginLatitude / 2, datum.longitude + marginLongitude / 2]], { color: 'transparent', fillOpacity: .5, fillColor: texture }));
                     })
                     break;
                 case 'add pins':
