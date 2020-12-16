@@ -56,7 +56,8 @@ export class AppWeatherVis {
     // 'this.textures.circles().radius(3).fill("transparent").strokeWidth(2)',
     // 'this.textures.circles().radius(4).fill("transparent").strokeWidth(2)',
     // 'this.textures.circles().radius(5).fill("transparent").strokeWidth(2)'
-  ]
+  ];
+  private categorizationMethod: 'quantile' | 'value' = 'value';
 
   @State() file: File;
   @State() datasetInfo?: {
@@ -90,6 +91,20 @@ export class AppWeatherVis {
         </ion-header>
 
         <ion-content class="ion-padding">
+          <ion-item disabled={!this.file}>
+            <ion-label>Categorization Methody</ion-label>
+            <ion-select
+              value={this.categorizationMethod}
+              onIonChange={async ({ detail }) => {
+                this.categorizationMethod = detail.value;
+                this.updateData(1);
+                this.updateData(2);
+              }}
+            >
+              <ion-select-option>quantile</ion-select-option>
+              <ion-select-option>value</ion-select-option>
+            </ion-select>
+          </ion-item>
           <ion-item disabled={!this.file}>
             <ion-label>Variables</ion-label>
             <ion-select
@@ -366,21 +381,37 @@ export class AppWeatherVis {
       });
 
       if (data) {
-        const quantileScaleDict = {};
-        variables.forEach(variable => quantileScaleDict[variable] = d3.scaleQuantile().domain(data.map(d => d[variable])).range([.25, .5, .75, 1]));
-        const obtainQuantileValueRange = (quantiles, quantileValue, variableValues) => {
-          switch (quantileValue) {
-            case .25:
-              return `${(+d3.min(variableValues)).toFixed(2)} ~ ${(+quantiles[0]).toFixed(2)}`;
-            case .5:
-              return `${(+quantiles[0]).toFixed(2)} ~ ${(+quantiles[1]).toFixed(2)}`;
-            case .75:
-              return `${(+quantiles[1]).toFixed(2)} ~ ${(+quantiles[2]).toFixed(2)}`;
-            case 1:
-              return `${(+quantiles[2]).toFixed(2)} ~ ${(+d3.max(variableValues)).toFixed(2)}`;
+        if (this.categorizationMethod === 'quantile') {
+          const quantileScaleDict = {};
+          variables.forEach(variable => quantileScaleDict[variable] = d3.scaleQuantile().domain(data.map(d => d[variable])).range([.25, .5, .75, 1]));
+          const obtainQuantileValueRange = (quantiles, quantileValue, variableValues) => {
+            switch (quantileValue) {
+              case .25:
+                return `${(+d3.min(variableValues)).toFixed(2)} ~ ${(+quantiles[0]).toFixed(2)}`;
+              case .5:
+                return `${(+quantiles[0]).toFixed(2)} ~ ${(+quantiles[1]).toFixed(2)}`;
+              case .75:
+                return `${(+quantiles[1]).toFixed(2)} ~ ${(+quantiles[2]).toFixed(2)}`;
+              case 1:
+                return `${(+quantiles[2]).toFixed(2)} ~ ${(+d3.max(variableValues)).toFixed(2)}`;
+            }
           }
+          data.forEach(d => variables.forEach(variable => d[`_${variable}`] = obtainQuantileValueRange(quantileScaleDict[variable].quantiles(), quantileScaleDict[variable](d[variable]), data.map(d => d[variable]))));
+        } else if (this.categorizationMethod === 'value') {
+          const valueScaleDict = {};
+          const valueThresholdDict = {};
+          variables.forEach(variable => {
+            const values = data.map(d => d[variable]);
+            const minValue = d3.min(values);
+            const maxValue = d3.max(values);
+            const thresholds = [minValue, minValue + (maxValue - minValue) * .25, minValue + (maxValue - minValue) * .5, minValue + (maxValue - minValue) * .75, maxValue];
+            valueThresholdDict[variable] = thresholds.map(d => d.toFixed(2));
+            valueScaleDict[variable] = d3.scaleThreshold().domain(thresholds).range(thresholds);
+          });
+          console.log(data.map(d => valueScaleDict[variables[0]](d[variables[0]])))
+          data.forEach(d => variables.forEach(variable => d[`_${variable}`] = valueScaleDict[variable](d[variable])));
+          data.forEach(d => variables.forEach(variable => d[`_${variable}`] = `${valueThresholdDict[variable][valueThresholdDict[variable].indexOf(valueScaleDict[variable](d[variable]).toFixed(2)) - 1]} ~ ${valueScaleDict[variable](d[variable]).toFixed(2)}`));
         }
-        data.forEach(d => variables.forEach(variable => d[`_${variable}`] = obtainQuantileValueRange(quantileScaleDict[variable].quantiles(), quantileScaleDict[variable](d[variable]), data.map(d => d[variable]))));
       }
 
       if (!range) {
