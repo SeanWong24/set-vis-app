@@ -175,11 +175,6 @@ export class AppWeatherVis {
                   });
                 }
               }}></iframe>
-            <ion-button
-              onClick={() => this.mapIframeElement.contentWindow.postMessage({
-                type: 'reset range selection'
-              }, '*')}
-            >Remove Range Selection</ion-button>
           </div>
           <div>
             <s-set-vis
@@ -220,11 +215,6 @@ export class AppWeatherVis {
                   });
                 }
               }}></iframe>
-            <ion-button
-              onClick={() => this.mapIframeElement2.contentWindow.postMessage({
-                type: 'reset range selection'
-              }, '*')}
-            >Remove Range Selection</ion-button>
           </div>
         </ion-content>
 
