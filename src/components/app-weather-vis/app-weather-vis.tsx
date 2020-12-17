@@ -58,6 +58,7 @@ export class AppWeatherVis {
     // 'this.textures.circles().radius(5).fill("transparent").strokeWidth(2)'
   ];
   private categorizationMethod: 'quantile' | 'value' = 'value';
+  private categorizedValueMap = new Map<string, string[]>();
 
   @State() file: File;
   @State() datasetInfo?: {
@@ -246,15 +247,12 @@ export class AppWeatherVis {
         value: d['_' + this.selectedVariables[0]],
         secondaryValue: d['_' + this.selectedVariables[1]]
       }));
-      const sortedKeys = [...new Set(dataPoints.map(d => d.value))].sort((a: string, b: string) => +a.split(' ')[0] - +b.split(' ')[0]) as string[];
-      const colorDict = sortedKeys.reduce((cd, k, i) => (cd[k] = this.colorScheme[i], cd), {} as any);
-      const sortedKeys2 = [...new Set(dataPoints.map(d => d.secondaryValue))].sort((a: string, b: string) => +a.split(' ')[0] - +b.split(' ')[0]) as string[];
-      const textureDict = sortedKeys2.reduce((cd, k, i) => (cd[k] = this.textureDefinitions[i], cd), {} as any);
+      const colorDict = this.categorizedValueMap.get(this.selectedVariables[0]).sort().reduce((cd, k, i) => (cd[k] = this.colorScheme[i], cd), {} as any);
+      const textureDict = this.categorizedValueMap.get(this.selectedVariables[1]).sort().reduce((td, k, i) => (td[k] = this.textureDefinitions[i], td), {} as any);
       dataPoints.forEach(d => {
         d.value = colorDict[d.value];
         d.secondaryValue = textureDict[d.secondaryValue];
       });
-      debugger
       this.mapIframeElement.contentWindow.postMessage({
         type: 'highlight',
         info: {
@@ -286,10 +284,8 @@ export class AppWeatherVis {
         value: d['_' + this.selectedVariables[0]],
         secondaryValue: d['_' + this.selectedVariables[1]]
       }));
-      const sortedKeys = [...new Set(dataPoints.map(d => d.value))].sort((a: string, b: string) => +a.split(' ')[0] - +b.split(' ')[0]) as string[];
-      const colorDict = sortedKeys.reduce((cd, k, i) => (cd[k] = this.colorScheme[i], cd), {} as any);
-      const sortedKeys2 = [...new Set(dataPoints.map(d => d.secondaryValue))].sort((a: string, b: string) => +a.split(' ')[0] - +b.split(' ')[0]) as string[];
-      const textureDict = sortedKeys2.reduce((cd, k, i) => (cd[k] = this.textureDefinitions[i], cd), {} as any);
+      const colorDict = this.categorizedValueMap.get(this.selectedVariables[0]).reduce((cd, k, i) => (cd[k] = this.colorScheme[i], cd), {} as any);
+      const textureDict = this.categorizedValueMap.get(this.selectedVariables[1]).reduce((td, k, i) => (td[k] = this.textureDefinitions[i], td), {} as any);
       dataPoints.forEach(d => {
         d.value = colorDict[d.value];
         d.secondaryValue = textureDict[d.secondaryValue];
@@ -371,22 +367,41 @@ export class AppWeatherVis {
       });
 
       if (data) {
+        this.categorizedValueMap = new Map();
         if (this.categorizationMethod === 'quantile') {
           const quantileScaleDict = {};
           variables.forEach(variable => quantileScaleDict[variable] = d3.scaleQuantile().domain(data.map(d => d[variable])).range([.25, .5, .75, 1]));
-          const obtainQuantileValueRange = (quantiles, quantileValue, variableValues) => {
+          variables.forEach(variable => {
+            const quantiles = quantileScaleDict[variable].quantiles();
+            const variableValues = data.map(d => d[variable]);
+            const variableMinValue = d3.min(variableValues);
+            const variableMaxValue = d3.max(variableValues);
+            this.categorizedValueMap.set(variable, [
+              `${variableMinValue.toFixed(2)} ~ ${(+quantiles[0]).toFixed(2)}`,
+              `${(+quantiles[0]).toFixed(2)} ~ ${(+quantiles[1]).toFixed(2)}`,
+              `${(+quantiles[1]).toFixed(2)} ~ ${(+quantiles[2]).toFixed(2)}`,
+              `${(+quantiles[2]).toFixed(2)} ~ ${variableMaxValue.toFixed(2)}`
+            ]);
+          })
+          const obtainQuantileValueRange = (variable, quantileValue) => {
             switch (quantileValue) {
               case .25:
-                return `${(+d3.min(variableValues)).toFixed(2)} ~ ${(+quantiles[0]).toFixed(2)}`;
+                return this.categorizedValueMap.get(variable)[0];
               case .5:
-                return `${(+quantiles[0]).toFixed(2)} ~ ${(+quantiles[1]).toFixed(2)}`;
+                return this.categorizedValueMap.get(variable)[1];
               case .75:
-                return `${(+quantiles[1]).toFixed(2)} ~ ${(+quantiles[2]).toFixed(2)}`;
+                return this.categorizedValueMap.get(variable)[2];
               case 1:
-                return `${(+quantiles[2]).toFixed(2)} ~ ${(+d3.max(variableValues)).toFixed(2)}`;
+                return this.categorizedValueMap.get(variable)[3];
             }
           }
-          data.forEach(d => variables.forEach(variable => d[`_${variable}`] = obtainQuantileValueRange(quantileScaleDict[variable].quantiles(), quantileScaleDict[variable](d[variable]), data.map(d => d[variable]))));
+          data.forEach(d => variables.forEach(variable => d[`_${variable}`] = obtainQuantileValueRange(variable, quantileScaleDict[variable](d[variable]))));
+          variables.forEach(variable => {
+            this.categorizedValueMap.set(
+              variable,
+              this.categorizedValueMap.get(variable).filter(v => data.filter(d => d[`_${variable}`] === v).length > 0)
+            );
+          });
         } else if (this.categorizationMethod === 'value') {
           const valueScaleDict = {};
           const valueThresholdDict = {};
@@ -396,11 +411,21 @@ export class AppWeatherVis {
             const maxValue = d3.max(values);
             const thresholds = [minValue, minValue + (maxValue - minValue) * .25, minValue + (maxValue - minValue) * .5, minValue + (maxValue - minValue) * .75, maxValue];
             valueThresholdDict[variable] = thresholds.map(d => d.toFixed(2));
-            valueScaleDict[variable] = d3.scaleThreshold().domain(thresholds).range(thresholds);
+            valueScaleDict[variable] = d3.scaleThreshold().domain(thresholds).range([0, 1, 2, 3]);
+            this.categorizedValueMap.set(variable, [
+              `${thresholds[0].toFixed(2)} ~ ${thresholds[1].toFixed(2)}`,
+              `${thresholds[1].toFixed(2)} ~ ${thresholds[2].toFixed(2)}`,
+              `${thresholds[2].toFixed(2)} ~ ${thresholds[3].toFixed(2)}`,
+              `${thresholds[3].toFixed(2)} ~ ${thresholds[4].toFixed(2)}`
+            ])
           });
-          console.log(data.map(d => valueScaleDict[variables[0]](d[variables[0]])))
-          data.forEach(d => variables.forEach(variable => d[`_${variable}`] = valueScaleDict[variable](d[variable])));
-          data.forEach(d => variables.forEach(variable => d[`_${variable}`] = `${valueThresholdDict[variable][valueThresholdDict[variable].indexOf(valueScaleDict[variable](d[variable]).toFixed(2)) - 1]} ~ ${valueScaleDict[variable](d[variable]).toFixed(2)}`));
+          data.forEach(d => variables.forEach(variable => d[`_${variable}`] = this.categorizedValueMap.get(variable)[valueScaleDict[variable](d[variable])]));
+          variables.forEach(variable => {
+            this.categorizedValueMap.set(
+              variable,
+              this.categorizedValueMap.get(variable).filter(v => data.filter(d => d[`_${variable}`] === v).length > 0)
+            );
+          });
         }
       }
 
