@@ -59,6 +59,8 @@ export class AppWeatherVis {
   ];
   private categorizationMethod: 'quantile' | 'value' = 'value';
   private categorizedValueMap = new Map<string, string[]>();
+  private mapDisplayMonth1 = 'Jan';
+  private mapDisplayMonth2 = 'Jan';
 
   @State() file: File;
   @State() datasetInfo?: {
@@ -135,6 +137,30 @@ export class AppWeatherVis {
               <ion-select-option>Week</ion-select-option>
               <ion-select-option>Month</ion-select-option>
               <ion-select-option>Quarter </ion-select-option>
+            </ion-select>
+          </ion-item>
+          <ion-item disabled={!this.file}>
+            <ion-label>Map 1 Display Month</ion-label>
+            <ion-select
+              value={this.mapDisplayMonth1}
+              onIonChange={async ({ detail }) => {
+                this.mapDisplayMonth1 = detail.value;
+                this.updateData(1);
+              }}
+            >
+              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(month => <ion-select-option>{month}</ion-select-option>)}
+            </ion-select>
+          </ion-item>
+          <ion-item disabled={!this.file}>
+            <ion-label>Map 2 Display Month</ion-label>
+            <ion-select
+              value={this.mapDisplayMonth2}
+              onIonChange={async ({ detail }) => {
+                this.mapDisplayMonth2 = detail.value;
+                this.updateData(2);
+              }}
+            >
+              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(month => <ion-select-option>{month}</ion-select-option>)}
             </ion-select>
           </ion-item>
           <div>
@@ -241,7 +267,7 @@ export class AppWeatherVis {
     const data = await this.queryData(this.selectedVariables, this.timeBy, range);
 
     if (visIndex === 1) {
-      const dataPoints = data.filter(d => d.Date === 'Jan').map(d => ({
+      const dataPoints = data.filter(d => d.Date === this.mapDisplayMonth1).map(d => ({
         latitude: d.Latitude,
         longitude: d.Longitude,
         value: d['_' + this.selectedVariables[0]],
@@ -258,7 +284,8 @@ export class AppWeatherVis {
         info: {
           data: dataPoints,
           marginLatitude: .312,
-          marginLongitude: .312
+          marginLongitude: .312,
+          legendInnerHTML: `<h4>${this.mapDisplayMonth1}</h4>`
         }
       }, '*');
 
@@ -278,7 +305,7 @@ export class AppWeatherVis {
         visType: 'box'
       }));
     } else if (visIndex === 2) {
-      const dataPoints = data.filter(d => d.Date === 'Jan').map(d => ({
+      const dataPoints = data.filter(d => d.Date === this.mapDisplayMonth2).map(d => ({
         latitude: d.Latitude,
         longitude: d.Longitude,
         value: d['_' + this.selectedVariables[0]],
@@ -295,7 +322,8 @@ export class AppWeatherVis {
         info: {
           data: dataPoints,
           marginLatitude: .312,
-          marginLongitude: .312
+          marginLongitude: .312,
+          legendInnerHTML: `<h4>${this.mapDisplayMonth2}</h4>`
         }
       }, '*');
 
