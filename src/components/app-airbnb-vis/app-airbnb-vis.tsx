@@ -50,17 +50,17 @@ export class AppArbnb {
     'this.textures.lines().orientation("6/8").size(10)',
     'this.textures.lines().orientation("6/8").size(10).heavier()',
   ];
-  
+
   private SQL: SqlJs.SqlJsStatic;
   private DB: SqlJs.Database;
   private fileInputElement: HTMLInputElement;
   private setVisElement: HTMLSSetVisElement;
   private mapIframeElement: HTMLIFrameElement;
-  
+
   private selectedParallelSetsVariables: string[] = [];
   private selectedStatisticsColumnsVariables: string[] = [];
   private selectedDate: string;
-  
+
   @State() file: File;
   @State() dateOptions: string[] = [];
 
@@ -217,7 +217,7 @@ export class AppArbnb {
 
     const selectedVariables = this.selectedParallelSetsVariables.concat(this.selectedStatisticsColumnsVariables).filter((d, i, a) => a.indexOf(d) === i);
 
-    let sqlQuery = `select ${selectedVariables.join(', ')} from arbnb where substr(last_modified, 0, 11) = '2016-08-22'`;
+    let sqlQuery = `select ${selectedVariables.join(', ')} from arbnb where substr(last_modified, 0, 11) = '${this.selectedDate}'`;
     if (range) {
       sqlQuery += `and latitude >= ${range.minLat} and latitude <= ${range.maxLat} and longitude >= ${range.minLon} and longitude <= ${range.maxLon}`;
     }
