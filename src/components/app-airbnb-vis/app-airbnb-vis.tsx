@@ -133,6 +133,7 @@ export class AppArbnb {
             parallelSetsDimensions={['']}
             parallelSetsTexutureDefinitions={this.textureDefinitions}
             parallelSetsColorScheme={this.colorScheme}
+            parallelSetsMaxSegmentLimit={7}
           ></s-set-vis>
           <iframe
             width="500"
