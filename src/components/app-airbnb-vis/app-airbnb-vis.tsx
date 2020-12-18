@@ -50,17 +50,19 @@ export class AppArbnb {
     'this.textures.lines().orientation("6/8").size(10)',
     'this.textures.lines().orientation("6/8").size(10).heavier()',
   ];
-
+  
   private SQL: SqlJs.SqlJsStatic;
   private DB: SqlJs.Database;
   private fileInputElement: HTMLInputElement;
   private setVisElement: HTMLSSetVisElement;
   private mapIframeElement: HTMLIFrameElement;
-
+  
   private selectedParallelSetsVariables: string[] = [];
   private selectedStatisticsColumnsVariables: string[] = [];
-
+  private selectedDate: string;
+  
   @State() file: File;
+  @State() dateOptions: string[] = [];
 
   async connectedCallback() {
     this.SQL = await initSqlJs({ locateFile: fileName => `./assets/sql.js/${fileName}` });
@@ -84,6 +86,19 @@ export class AppArbnb {
         </ion-header>
 
         <ion-content class="ion-padding">
+          <ion-item disabled={!this.file}>
+            <ion-label>Date</ion-label>
+            <ion-select
+              onIonChange={async ({ detail }) => {
+                this.selectedDate = detail.value;
+                this.updateData();
+              }}
+            >
+              {
+                this.dateOptions.map(d => (<ion-select-option>{d}</ion-select-option>))
+              }
+            </ion-select>
+          </ion-item>
           <ion-item disabled={!this.file}>
             <ion-label>Parallel Sets Variables</ion-label>
             <ion-select
@@ -167,6 +182,9 @@ export class AppArbnb {
             await loading.present();
             const fileBuffer = await this.file.arrayBuffer();
             this.DB = new this.SQL.Database(new Uint8Array(fileBuffer));
+            const sqlQuery = 'select distinct substr(last_modified, 0, 11) from arbnb';
+            const result = this.DB.exec(sqlQuery)?.[0];
+            this.dateOptions = result.values.map(d => d[0].toString());
             await loading.dismiss();
           }}></input>
       </Host >
@@ -174,7 +192,7 @@ export class AppArbnb {
   }
 
   private async updateData(range?: { minLat: number, maxLat: number, minLon: number; maxLon: number }) {
-    if (this.selectedParallelSetsVariables.length > 0 && this.selectedStatisticsColumnsVariables.length > 0) {
+    if (this.selectedDate && this.selectedParallelSetsVariables.length > 0 && this.selectedStatisticsColumnsVariables.length > 0) {
       const data = await this.queryData(range);
       // TODO try to use states
       if (data) {
