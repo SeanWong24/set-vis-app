@@ -203,7 +203,6 @@ export class AppArbnb {
       sqlQuery += `and latitude >= ${range.minLat} and latitude <= ${range.maxLat} and longitude >= ${range.minLon} and longitude <= ${range.maxLon}`;
     }
     const result = this.DB.exec(sqlQuery)?.[0];
-    debugger
 
     data = result?.values.map(value => {
       const datum = {};
@@ -216,21 +215,6 @@ export class AppArbnb {
       }
       return datum;
     });
-    // data = result?.values.map(value => {
-    //   const datum = {};
-    //   for (let i = 0; i < value.length; i++) {
-    //     switch (result.columns[i]) {
-    //       case 'overall_satisfaction':
-    //       case 'price':
-    //         datum[result.columns[i]] = isNaN(+value[i]) ? 0 : +value[i];
-    //         break;
-    //       default:
-    //         datum[result.columns[i]] = value[i];
-    //         break;
-    //     }
-    //   }
-    //   return datum;
-    // });
 
     return data;
   }
