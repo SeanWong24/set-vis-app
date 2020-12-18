@@ -285,7 +285,7 @@ export class AppWeatherVis {
           data: dataPoints,
           marginLatitude: .312,
           marginLongitude: .312,
-          legendInnerHTML: `<h4>${this.mapDisplayMonth1}</h4>`
+          legendInnerHTML: `<h4>${this.mapDisplayMonth1}</h4>${Object.entries(colorDict).map(([value, color]) => `<i style="background: ${color}"></i><span>${value}</span><br/>`).join('')}`
         }
       }, '*');
 
@@ -323,7 +323,7 @@ export class AppWeatherVis {
           data: dataPoints,
           marginLatitude: .312,
           marginLongitude: .312,
-          legendInnerHTML: `<h4>${this.mapDisplayMonth2}</h4>`
+          legendInnerHTML: `<h4>${this.mapDisplayMonth2}</h4>${Object.entries(colorDict).map(([value, color]) => `<i style="background: ${color}"></i><span>${value}</span><br/>`).join('')}`
         }
       }, '*');
 
