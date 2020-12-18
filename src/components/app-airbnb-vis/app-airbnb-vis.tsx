@@ -30,6 +30,27 @@ export class AppArbnb {
     'price'
   ];
 
+  private readonly colorScheme = [
+    '#ff1744',
+    '#00e676',
+    '#2979ff',
+    '#ffea00',
+    '#00e5ff',
+    '#d500f9',
+    '#ff812d',
+    '#10fab7'
+  ];
+  private textureDefinitions = [
+    'this.textures.lines().orientation("4/8").size(1000)',
+    'this.textures.circles().radius(2)',
+    'this.textures.lines().orientation("2/8").size(10)',
+    'this.textures.lines().orientation("2/8").size(10).heavier()',
+    'this.textures.lines().orientation("8/8").size(10)',
+    'this.textures.lines().orientation("8/8").size(10).heavier()',
+    'this.textures.lines().orientation("6/8").size(10)',
+    'this.textures.lines().orientation("6/8").size(10).heavier()',
+  ];
+
   private SQL: SqlJs.SqlJsStatic;
   private DB: SqlJs.Database;
   private fileInputElement: HTMLInputElement;
@@ -95,6 +116,8 @@ export class AppArbnb {
             ref={el => this.setVisElement = el}
             parallel-sets-ribbon-tension={.5}
             parallelSetsDimensions={['']}
+            parallelSetsTexutureDefinitions={this.textureDefinitions}
+            parallelSetsColorScheme={this.colorScheme}
           ></s-set-vis>
           <iframe
             width="500"
