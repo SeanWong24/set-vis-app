@@ -273,8 +273,16 @@ export class AppWeatherVis {
         value: d['_' + this.selectedVariables[0]],
         secondaryValue: d['_' + this.selectedVariables[1]]
       }));
-      const colorDict = this.categorizedValueMap.get(this.selectedVariables[0]).sort().reduce((cd, k, i) => (cd[k] = this.colorScheme[i], cd), {} as any);
-      const textureDict = this.categorizedValueMap.get(this.selectedVariables[1]).sort().reduce((td, k, i) => (td[k] = this.textureDefinitions[i], td), {} as any);
+      const colorDict = this.categorizedValueMap.get(this.selectedVariables[0]).sort((a, b) => {
+        if (a.match(/[1-9] ~ [1-9]/)) {
+          return +a.split(' ~ ')[0] - +(b as string).split(' ~ ')[0];
+        }
+      }).reduce((cd, k, i) => (cd[k] = this.colorScheme[i], cd), {} as any);
+      const textureDict = this.categorizedValueMap.get(this.selectedVariables[1]).sort((a, b) => {
+        if (a.match(/[1-9] ~ [1-9]/)) {
+          return +a.split(' ~ ')[0] - +(b as string).split(' ~ ')[0];
+        }
+      }).reduce((td, k, i) => (td[k] = this.textureDefinitions[i], td), {} as any);
       dataPoints.forEach(d => {
         d.value = colorDict[d.value];
         d.secondaryValue = textureDict[d.secondaryValue];
