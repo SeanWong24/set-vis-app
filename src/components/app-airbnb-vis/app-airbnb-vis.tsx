@@ -14,14 +14,20 @@ import { SqlJs } from 'sql.js/module';
 })
 export class AppArbnb {
 
-  private readonly variableOptions: string[] = [
-    "room_type",
-    "borough",
-    "neighborhood",
-    "reviews",
-    "overall",
-    "satisfaction",
-    "accommodates"
+  private readonly categoricalVariableOptions: string[] = [
+    'room_id',
+    'host_id',
+    'room_type',
+    'borough',
+    'neighborhood',
+    'bedrooms'
+  ];
+  private readonly numericalVariableOptions: string[] = [
+    'reviews',
+    'overall_satisfaction',
+    'accommodates',
+    'bedrooms',
+    'price'
   ];
 
   private SQL: SqlJs.SqlJsStatic;
@@ -29,8 +35,9 @@ export class AppArbnb {
   private fileInputElement: HTMLInputElement;
   private setVisElement: HTMLSSetVisElement;
   private mapIframeElement: HTMLIFrameElement;
-  
-  selectedVariables: string[];
+
+  private selectedParallelSetsVariables: string[] = [];
+  private selectedStatisticsColumnsVariables: string[] = [];
 
   @State() file: File;
 
@@ -57,16 +64,30 @@ export class AppArbnb {
 
         <ion-content class="ion-padding">
           <ion-item disabled={!this.file}>
-            <ion-label>Variables</ion-label>
+            <ion-label>Parallel Sets Variables</ion-label>
             <ion-select
               multiple
               onIonChange={async ({ detail }) => {
-                this.selectedVariables = detail.value;
+                this.selectedParallelSetsVariables = detail.value;
                 this.updateData();
               }}
             >
               {
-                this.variableOptions.map(d => (<ion-select-option>{d}</ion-select-option>))
+                this.categoricalVariableOptions.map(d => (<ion-select-option>{d}</ion-select-option>))
+              }
+            </ion-select>
+          </ion-item>
+          <ion-item disabled={!this.file}>
+            <ion-label>Statisitcs Columns Variables</ion-label>
+            <ion-select
+              multiple
+              onIonChange={async ({ detail }) => {
+                this.selectedStatisticsColumnsVariables = detail.value;
+                this.updateData();
+              }}
+            >
+              {
+                this.numericalVariableOptions.map(d => (<ion-select-option>{d}</ion-select-option>))
               }
             </ion-select>
           </ion-item>
@@ -130,47 +151,63 @@ export class AppArbnb {
   }
 
   private async updateData(range?: { minLat: number, maxLat: number, minLon: number; maxLon: number }) {
-    const data = await this.queryData(range);
-    // TODO try to use states
-    if (data) {
-      this.mapIframeElement.contentWindow.postMessage({
-        type: 'add pins',
-        info: data.sort((a, b) => b.overall_satisfaction - a.overall_satisfaction).slice(0, 100).map(d => [d.latitude, d.longitude])
-      }, '*');
+    if (this.selectedParallelSetsVariables.length > 0 && this.selectedStatisticsColumnsVariables.length > 0) {
+      const data = await this.queryData(range);
+      // TODO try to use states
+      if (data) {
+        this.mapIframeElement.contentWindow.postMessage({
+          type: 'add pins',
+          info: data.sort((a, b) => b.overall_satisfaction - a.overall_satisfaction).slice(0, 100).map(d => [d.latitude, d.longitude])
+        }, '*');
 
-      this.setVisElement.data = data;
-      this.setVisElement.parallelSetsDimensions = ['room_type', 'borough', 'neighborhood'];
-      this.setVisElement.statisticsPlotGroupDefinitions = ['overall_satisfaction', 'price'].map(variable => ({
-        dimensionName: variable,
-        visType: 'box'
-      }));
+        this.setVisElement.data = data;
+        this.setVisElement.parallelSetsDimensions = this.selectedParallelSetsVariables;
+        this.setVisElement.statisticsPlotGroupDefinitions = this.selectedStatisticsColumnsVariables.map(variable => ({
+          dimensionName: variable,
+          visType: 'box'
+        }));
+      }
     }
   }
 
   private async queryData(range?: { minLat: number, maxLat: number, minLon: number; maxLon: number }) {
     let data = [];
 
-    let sqlQuery = `select room_type, borough, neighborhood, overall_satisfaction, price, latitude, longitude from arbnb where substr(last_modified, 0, 11) = '2016-08-22'`;
+    const selectedVariables = this.selectedParallelSetsVariables.concat(this.selectedStatisticsColumnsVariables).filter((d, i, a) => a.indexOf(d) === i);
+
+    let sqlQuery = `select ${selectedVariables.join(', ')} from arbnb where substr(last_modified, 0, 11) = '2016-08-22'`;
     if (range) {
       sqlQuery += `and latitude >= ${range.minLat} and latitude <= ${range.maxLat} and longitude >= ${range.minLon} and longitude <= ${range.maxLon}`;
     }
     const result = this.DB.exec(sqlQuery)?.[0];
+    debugger
 
     data = result?.values.map(value => {
       const datum = {};
       for (let i = 0; i < value.length; i++) {
-        switch (result.columns[i]) {
-          case 'overall_satisfaction':
-          case 'price':
-            datum[result.columns[i]] = isNaN(+value[i]) ? 0 : +value[i];
-            break;
-          default:
-            datum[result.columns[i]] = value[i];
-            break;
+        if (this.numericalVariableOptions.find(d => d === result.columns[i])) {
+          datum[result.columns[i]] = isNaN(+value[i]) ? 0 : +value[i];
+        } else {
+          datum[result.columns[i]] = value[i];
         }
       }
       return datum;
     });
+    // data = result?.values.map(value => {
+    //   const datum = {};
+    //   for (let i = 0; i < value.length; i++) {
+    //     switch (result.columns[i]) {
+    //       case 'overall_satisfaction':
+    //       case 'price':
+    //         datum[result.columns[i]] = isNaN(+value[i]) ? 0 : +value[i];
+    //         break;
+    //       default:
+    //         datum[result.columns[i]] = value[i];
+    //         break;
+    //     }
+    //   }
+    //   return datum;
+    // });
 
     return data;
   }
