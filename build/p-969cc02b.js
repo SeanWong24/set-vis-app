@@ -1,0 +1,1 @@
+function a(a,s){switch(arguments.length){case 0:break;case 1:this.range(a);break;default:this.range(s).domain(a)}return this}var s=Array.prototype,r=s.map,t=s.slice;export{a as i,r as m,t as s}
