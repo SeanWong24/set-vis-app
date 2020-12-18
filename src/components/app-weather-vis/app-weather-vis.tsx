@@ -95,7 +95,7 @@ export class AppWeatherVis {
 
         <ion-content class="ion-padding">
           <ion-item disabled={!this.file}>
-            <ion-label>Categorization Methody</ion-label>
+            <ion-label>Categorization Method</ion-label>
             <ion-select
               value={this.categorizationMethod}
               onIonChange={async ({ detail }) => {
