@@ -3,7 +3,7 @@ import { loadingController } from '@ionic/core';
 import 'set-vis';
 import initSqlJs from 'sql.js';
 import { SqlJs } from 'sql.js/module';
-// import * as d3 from 'd3';
+import * as d3 from 'd3';
 
 /// <reference path="../../../node_modules/@types/sql.js/module.d.ts" />
 
@@ -20,7 +20,11 @@ export class AppArbnb {
     'room_type',
     'borough',
     'neighborhood',
-    'bedrooms'
+    'bedrooms',
+    '_reviews',
+    '_overall_satisfaction',
+    '_accommodates',
+    '_price'
   ];
   private readonly numericalVariableOptions: string[] = [
     'reviews',
@@ -60,6 +64,8 @@ export class AppArbnb {
   private selectedParallelSetsVariables: string[] = [];
   private selectedStatisticsColumnsVariables: string[] = [];
   private selectedDate: string;
+  private categorizationMethod: 'quantile' | 'value' = 'value';
+  private categorizedValueMap = new Map<string, string[]>();
 
   @State() file: File;
   @State() dateOptions: string[] = [];
@@ -97,6 +103,19 @@ export class AppArbnb {
               {
                 this.dateOptions.map(d => (<ion-select-option>{d}</ion-select-option>))
               }
+            </ion-select>
+          </ion-item>
+          <ion-item disabled={!this.file}>
+            <ion-label>Categorization Method</ion-label>
+            <ion-select
+              value={this.categorizationMethod}
+              onIonChange={async ({ detail }) => {
+                this.categorizationMethod = detail.value;
+                this.updateData();
+              }}
+            >
+              <ion-select-option>quantile</ion-select-option>
+              <ion-select-option>value</ion-select-option>
             </ion-select>
           </ion-item>
           <ion-item disabled={!this.file}>
@@ -215,7 +234,7 @@ export class AppArbnb {
   private async queryData(range?: { minLat: number, maxLat: number, minLon: number; maxLon: number }) {
     let data = [];
 
-    const selectedVariables = this.selectedParallelSetsVariables.concat(this.selectedStatisticsColumnsVariables).filter((d, i, a) => a.indexOf(d) === i);
+    const selectedVariables = this.selectedParallelSetsVariables.filter(d => d[0] !== '_').concat(this.selectedStatisticsColumnsVariables).filter((d, i, a) => a.indexOf(d) === i);
 
     let sqlQuery = `select ${selectedVariables.join(', ')} from arbnb where substr(last_modified, 0, 11) = '${this.selectedDate}'`;
     if (range) {
@@ -234,6 +253,72 @@ export class AppArbnb {
       }
       return datum;
     });
+
+    if (data) {
+      this.categorizedValueMap = new Map();
+      const variables = this.selectedParallelSetsVariables
+        .filter(d => d[0] === '_')
+        .map(d => d.substring(1));
+      if (this.categorizationMethod === 'quantile') {
+        const quantileScaleDict = {};
+        variables.forEach(variable => quantileScaleDict[variable] = d3.scaleQuantile().domain(data.map(d => d[variable]).sort()).range([.25, .5, .75, 1]));
+        variables.forEach(variable => {
+          const quantiles = quantileScaleDict[variable].quantiles();
+          const variableValues = data.map(d => d[variable]);
+          const variableMinValue = d3.min(variableValues);
+          const variableMaxValue = d3.max(variableValues);
+          this.categorizedValueMap.set(variable, [
+            `${variableMinValue.toFixed(2)} ~ ${(+quantiles[0]).toFixed(2)}`,
+            `${(+quantiles[0]).toFixed(2)} ~ ${(+quantiles[1]).toFixed(2)}`,
+            `${(+quantiles[1]).toFixed(2)} ~ ${(+quantiles[2]).toFixed(2)}`,
+            `${(+quantiles[2]).toFixed(2)} ~ ${variableMaxValue.toFixed(2)}`
+          ]);
+        });
+        const obtainQuantileValueRange = (variable, quantileValue) => {
+          switch (quantileValue) {
+            case .25:
+              return this.categorizedValueMap.get(variable)[0];
+            case .5:
+              return this.categorizedValueMap.get(variable)[1];
+            case .75:
+              return this.categorizedValueMap.get(variable)[2];
+            case 1:
+              return this.categorizedValueMap.get(variable)[3];
+          }
+        }
+        data.forEach(d => variables.forEach(variable => d[`_${variable}`] = obtainQuantileValueRange(variable, quantileScaleDict[variable](d[variable]))));
+        variables.forEach(variable => {
+          this.categorizedValueMap.set(
+            variable,
+            this.categorizedValueMap.get(variable).filter(v => data.filter(d => d[`_${variable}`] === v).length > 0)
+          );
+        });
+      } else if (this.categorizationMethod === 'value') {
+        const valueScaleDict = {};
+        const valueThresholdDict = {};
+        variables.forEach(variable => {
+          const values = data.map(d => d[variable]);
+          const minValue = d3.min(values);
+          const maxValue = d3.max(values);
+          const thresholds = [minValue, minValue + (maxValue - minValue) * .25, minValue + (maxValue - minValue) * .5, minValue + (maxValue - minValue) * .75, maxValue];
+          valueThresholdDict[variable] = thresholds.map(d => d.toFixed(2));
+          valueScaleDict[variable] = d3.scaleThreshold().domain(thresholds).range([0, 1, 2, 3]);
+          this.categorizedValueMap.set(variable, [
+            `${thresholds[0].toFixed(2)} ~ ${thresholds[1].toFixed(2)}`,
+            `${thresholds[1].toFixed(2)} ~ ${thresholds[2].toFixed(2)}`,
+            `${thresholds[2].toFixed(2)} ~ ${thresholds[3].toFixed(2)}`,
+            `${thresholds[3].toFixed(2)} ~ ${thresholds[4].toFixed(2)}`
+          ])
+        });
+        data.forEach(d => variables.forEach(variable => d[`_${variable}`] = this.categorizedValueMap.get(variable)[valueScaleDict[variable](d[variable])]));
+        variables.forEach(variable => {
+          this.categorizedValueMap.set(
+            variable,
+            this.categorizedValueMap.get(variable).filter(v => data.filter(d => d[`_${variable}`] === v).length > 0)
+          );
+        });
+      }
+    }
 
     return data;
   }
