@@ -35,14 +35,18 @@ export class AppArbnb {
   ];
 
   private readonly colorScheme = [
-    '#ff1744',
-    '#00e676',
-    '#2979ff',
-    '#ffea00',
-    '#00e5ff',
-    '#d500f9',
-    '#ff812d',
-    '#10fab7'
+    '#8dd3c7',
+    '#ffffb3',
+    '#bebada',
+    '#fb8072',
+    '#80b1d3',
+    '#fdb462',
+    '#b3de69',
+    '#fccde5',
+    '#d9d9d9',
+    '#bc80bd',
+    '#ccebc5',
+    '#ffed6f',
   ];
   private textureDefinitions = [
     'this.textures.lines().orientation("4/8").size(1000)',
